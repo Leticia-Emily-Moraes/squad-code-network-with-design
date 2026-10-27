@@ -519,3 +519,41 @@ test('chats are saved per kind, capped and swept when their feature is gone', as
   chats = pageTag(await page(), 'squad-memory').chats;
   assert.equal(chats.agent.a1, undefined);
 });
+
+test('MCP servers reach the run as --mcp-config, with --strict-mcp-config, and invalid ones are refused', async () => {
+  const mcpServers = {
+    'figma-desktop': { type: 'http', url: 'http://127.0.0.1:3845/mcp' },
+    local: { command: 'node', args: ['server.mjs'], env: { TOKEN: 'x' } },
+  };
+  let res = await api('/api/runs', { method: 'POST', body: JSON.stringify({ prompt: 'hello', options: { cwd: workdir, mcpServers, allowedTools: ['mcp__figma-desktop'] } }) });
+  assert.equal(res.status, 201);
+  const { runId, args } = await res.json();
+  // The file is a temp file, masked in the response, and --strict-mcp-config keeps the person's own servers out.
+  assert.ok(args.includes('--mcp-config'));
+  assert.equal(args[args.indexOf('--mcp-config') + 1], '<mcp-file>');
+  assert.ok(args.includes('--strict-mcp-config'));
+  assert.ok(args.includes('--allowedTools'));
+  assert.equal(args[args.indexOf('--allowedTools') + 1], 'mcp__figma-desktop');
+  const init = (await collect(runId)).find(e => e.subtype === 'init');
+  // The bridge normalizes: the transport is spelled out, so the file says exactly what Claude Code will load.
+  assert.deepEqual(init.mcp, { mcpServers: {
+    'figma-desktop': { type: 'http', url: 'http://127.0.0.1:3845/mcp' },
+    local: { type: 'stdio', command: 'node', args: ['server.mjs'], env: { TOKEN: 'x' } },
+  } });
+  assert.equal(init.strictMcp, true);
+
+  // No servers: no flag at all.
+  res = await api('/api/runs', { method: 'POST', body: JSON.stringify({ prompt: 'hello', options: { cwd: workdir } }) });
+  assert.ok(!(await res.json()).args.includes('--mcp-config'));
+
+  for (const bad of [
+    { k: { url: 'file:///etc/passwd' } },
+    { k: { type: 'ws', url: 'http://127.0.0.1/mcp' } },
+    { k: { command: '' } },
+    { 'Bad Key': { url: 'http://127.0.0.1/mcp' } },
+    { k: { url: 'http://127.0.0.1/mcp', headers: { 'x': 1 } } },
+  ]) {
+    const r = await api('/api/runs', { method: 'POST', body: JSON.stringify({ prompt: 'hello', options: { cwd: workdir, mcpServers: bad } }) });
+    assert.equal(r.status, 400, JSON.stringify(bad));
+  }
+});

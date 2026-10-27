@@ -18,10 +18,12 @@ process.stdin.on('end', () => {
   const settings = settingsFile ? JSON.parse(readFileSync(settingsFile, 'utf8')) : null;
   const agentsFile = opt('--agents');
   const agents = agentsFile ? JSON.parse(readFileSync(agentsFile, 'utf8')) : null;
+  const mcpFile = opt('--mcp-config');
+  const mcp = mcpFile ? JSON.parse(readFileSync(mcpFile, 'utf8')) : null;
   // GITCHECK in the prompt: report the repository git finds from the cwd, as the agents' git commands would (null = none).
   let gitTop;
   if (input.includes('GITCHECK')) { try { gitTop = execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(); } catch { gitTop = null; } }
-  emit({ type: 'system', subtype: 'init', cwd: process.cwd(), gitCeiling: process.env.GIT_CEILING_DIRECTORIES || null, gitTop, session_id: 'fake-session', model: opt('--model') || 'default', permissionMode: opt('--permission-mode') || 'default', args, settings, agents, foregroundAgents: process.env.CLAUDE_CODE_DISABLE_BACKGROUND_TASKS === '1' });
+  emit({ type: 'system', subtype: 'init', cwd: process.cwd(), gitCeiling: process.env.GIT_CEILING_DIRECTORIES || null, gitTop, session_id: 'fake-session', model: opt('--model') || 'default', permissionMode: opt('--permission-mode') || 'default', args, settings, agents, mcp, strictMcp: args.includes('--strict-mcp-config'), foregroundAgents: process.env.CLAUDE_CODE_DISABLE_BACKGROUND_TASKS === '1' });
   // With squad colleagues, call the first one through the Agent tool (as Claude Code streams it).
   const colleague = agents && Object.keys(agents)[0];
   if (colleague && !input.includes('SLEEP') && !input.includes('FAIL')) {
