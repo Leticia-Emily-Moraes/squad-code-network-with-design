@@ -594,3 +594,15 @@ test('built-in MCP server source is served for the export, only with the token, 
   assert.equal((await api('/api/mcp/__proto__/source')).status, 404);
   assert.notEqual((await fetch(`${BASE}/api/mcp/figma-api/source`)).status, 200);
 });
+
+test('MCP tools can be allowed one by one: mcp__<server>__<tool> reaches --allowedTools and malformed names are refused', async () => {
+  const allowed = ['Read', 'mcp__figma-remote__whoami', 'mcp__figma-remote__use_figma', 'mcp__figma-api'];
+  const res = await api('/api/runs', { method: 'POST', body: JSON.stringify({ prompt: 'hello', options: { cwd: workdir, allowedTools: allowed } }) });
+  assert.equal(res.status, 201);
+  const { args } = await res.json();
+  assert.equal(args[args.indexOf('--allowedTools') + 1], allowed.join(','));
+  for (const bad of ['mcp__figma remote__x', 'mcp__figma-remote__a b', 'mcp__figma-remote__x(y)']) {
+    const r = await api('/api/runs', { method: 'POST', body: JSON.stringify({ prompt: 'hello', options: { cwd: workdir, allowedTools: [bad] } }) });
+    assert.equal(r.status, 400, bad);
+  }
+});

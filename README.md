@@ -325,6 +325,33 @@ Ao exportar a operação com o bridge ligado, o servidor vai junto em `.claude/m
 lê o Figma: exporte `FIGMA_TOKEN` e aprove o servidor do projeto na primeira vez que abrir o Claude Code. Exportando pelo `index.html` (demo),
 o servidor não vai, e o `CLAUDE.md` exportado avisa.
 
+### Conectar o MCP oficial do Figma (criar e editar designs)
+
+O servidor `figma-api` só lê. Para o agente de design **criar um projeto novo no Figma e editá-lo**, é preciso o servidor MCP oficial da Figma,
+porque a API REST não cria arquivos nem edita nós. Ele exige assento **Full** (as fontes de terceiros dizem isso; confira com o `whoami` da
+sua conta depois que o plano Education for aprovado) e um login OAuth, que a execução do bridge não consegue fazer sozinha. Por isso o login é feito
+uma vez no terminal:
+
+```sh
+claude mcp add --transport http figma-remote https://mcp.figma.com/mcp
+claude mcp login figma-remote     # abre o navegador (use --no-browser por SSH)
+claude mcp list                   # deve mostrar figma-remote conectado; não chama o modelo, não custa nada
+```
+
+Use exatamente o nome `figma-remote`: o login é guardado por servidor, e a execução do bridge usa esse mesmo nome e endereço. Em seguida,
+no estúdio do agente (aba Ferramentas > Servidores MCP), marque **Figma oficial (nuvem)** e, para criar e editar, **Permitir criar e editar
+designs**. Sem essa segunda caixa o agente só lê (`create_session`, `get_design_context`, `get_screenshot` e as demais de leitura).
+
+Para conferir o caminho completo (o mesmo que o bridge percorre, com uma chamada mínima ao modelo):
+
+```sh
+echo "Chame a ferramenta whoami do Figma e responda só com o nome da conta e o plano." | claude -p --model haiku --max-budget-usd 0.05 --strict-mcp-config --mcp-config '{"mcpServers":{"figma-remote":{"type":"http","url":"https://mcp.figma.com/mcp"}}}' --allowedTools mcp__figma-remote__whoami
+```
+
+Cuidado com a escrita: o servidor **não limita o agente a um arquivo**. Ele pode alterar qualquer arquivo da conta que fez o login, e a execução
+não tem ninguém para aprovar. O agente é instruído a mexer só no que criou e no arquivo do briefing, mas isso é uma instrução, não uma trava.
+A forma de garantir é usar uma conta do Figma só para o agente, com apenas o projeto dele.
+
 ### Dados do workspace
 
 Com o bridge, tudo fica num banco SQLite local, `data/squad.db` ao lado do `server.js` (fora do git), criado na
