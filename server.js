@@ -69,6 +69,11 @@ const MODEL_RE = /^[A-Za-z0-9._\-\[\]]{1,80}$/;
 const MCP_KEY_RE = /^[a-z0-9][a-z0-9_-]{0,47}$/;
 const MCP_TYPES = ['http', 'sse', 'stdio'];
 const MAX_MCP = 10;
+// Servers the bridge ships (scripts/): the page asks for them by name, so it never supplies their command, and their secret is a
+// reference to the bridge's own environment, expanded by Claude Code (${VAR:-}, empty when unset) instead of written to the temp file.
+const BUILTIN_MCP = {
+  'figma-api': () => ({ type: 'stdio', command: process.execPath, args: [path.join(ROOT, 'scripts', 'figma-mcp.mjs')], env: { FIGMA_TOKEN: '${FIGMA_TOKEN:-}' } }),
+};
 const MAX_EVENTS = 5000;
 const MAX_BODY = 2 * 1024 * 1024;
 
@@ -283,15 +288,17 @@ function validateMcpServers(value) {
   if (!entries.length) return null;
   if (entries.length > MAX_MCP) throw new Error(`Até ${MAX_MCP} servidores MCP por execução.`);
   const out = {};
+  // Claude Code expands ${VAR} in every field of the file: a value from the page must never reach the bridge's own environment.
+  const plain = (s, what) => { if (/\$\{/.test(s)) throw new Error(what); return s; };
   const strings = (list, what) => {
-    if (!Array.isArray(list) || list.length > 30 || !list.every(x => typeof x === 'string' && x.length <= 500)) throw new Error(what);
+    if (!Array.isArray(list) || list.length > 30 || !list.every(x => typeof x === 'string' && x.length <= 500 && !/\$\{/.test(x))) throw new Error(what);
     return list;
   };
   const record = (obj, what) => {
     if (!obj || typeof obj !== 'object' || Array.isArray(obj)) throw new Error(what);
     const map = {};
     for (const [k, v] of Object.entries(obj)) {
-      if (!/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(k) || typeof v !== 'string' || v.length > 2000) throw new Error(what);
+      if (!/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(k) || typeof v !== 'string' || v.length > 2000 || /\$\{/.test(v)) throw new Error(what);
       map[k] = v;
     }
     return map;
@@ -299,16 +306,23 @@ function validateMcpServers(value) {
   for (const [key, def] of entries) {
     if (!MCP_KEY_RE.test(key)) throw new Error(`Identificador de servidor MCP inválido: ${String(key).slice(0, 60)}`);
     if (!def || typeof def !== 'object' || Array.isArray(def)) throw new Error(`Definição inválida do servidor MCP ${key}.`);
+    if (def.builtin !== undefined) {
+      if (typeof def.builtin !== 'string' || !Object.hasOwn(BUILTIN_MCP, def.builtin)) throw new Error(`Servidor MCP embutido desconhecido: ${String(def.builtin).slice(0, 60)}`);
+      out[key] = BUILTIN_MCP[def.builtin]();
+      continue;
+    }
     const type = def.type === undefined ? (def.command ? 'stdio' : 'http') : String(def.type);
     if (!MCP_TYPES.includes(type)) throw new Error(`Transporte inválido do servidor MCP ${key}.`);
     if (type === 'stdio') {
       const command = typeof def.command === 'string' ? def.command.trim() : '';
       if (!command || command.length > 500) throw new Error(`Comando inválido do servidor MCP ${key}.`);
+      plain(command, `Comando inválido do servidor MCP ${key}.`);
       out[key] = { type, command };
       if (def.args !== undefined) out[key].args = strings(def.args, `Argumentos inválidos do servidor MCP ${key}.`);
       if (def.env !== undefined) out[key].env = record(def.env, `Variáveis de ambiente inválidas do servidor MCP ${key}.`);
     } else {
       let url;
+      plain(String(def.url || ''), `URL inválida do servidor MCP ${key}.`);
       try { url = new URL(String(def.url || '')); } catch { throw new Error(`URL inválida do servidor MCP ${key}.`); }
       if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error(`URL inválida do servidor MCP ${key}: use http ou https.`);
       out[key] = { type, url: url.href };
@@ -549,7 +563,7 @@ async function handle(req, res) {
     if (req.method === 'GET' && url.pathname === '/api/health') {
       const bin = url.searchParams.get('claudePath') || DEFAULT_BIN;
       const info = await claudeVersion(bin);
-      return json(res, 200, { ok: true, bridge: 'squad-code', claudeVersion: info.version, claudePath: info.resolved, claudeError: info.error, defaultCwd: process.cwd(), projectsDir: longPath(PROJECTS_DIR), home: HOME, platform: process.platform, activeRuns: activeCount(), maxConcurrent, dbReady: !setupNeeded(), dbPath: store?.file || DB_FILE });
+      return json(res, 200, { ok: true, bridge: 'squad-code', claudeVersion: info.version, claudePath: info.resolved, claudeError: info.error, defaultCwd: process.cwd(), projectsDir: longPath(PROJECTS_DIR), home: HOME, platform: process.platform, activeRuns: activeCount(), maxConcurrent, dbReady: !setupNeeded(), dbPath: store?.file || DB_FILE, figmaToken: Boolean(process.env.FIGMA_TOKEN) });
     }
     // First start: the page creates the database with the workspace the person chose (from scratch, the example, a backup or the
     // browser's copy). Validated before anything is written; refused once a workspace exists.

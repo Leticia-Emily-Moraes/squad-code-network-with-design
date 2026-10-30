@@ -249,6 +249,7 @@ A lista completa está no [guia](docs/GUIA.md#-controles).
 | `SQUAD_CLAUDE_BIN` | `claude` | Executável do Claude Code (nome no `PATH` ou caminho completo) |
 | `SQUAD_PROJECTS_DIR` | `./projects` | Raiz das pastas de trabalho dos agentes |
 | `SQUAD_DATA_DIR` | `./data` | Pasta do banco SQLite (`squad.db`) |
+| `FIGMA_TOKEN` | (vazio) | Token pessoal do Figma, só para os agentes de design (veja abaixo). Gere em Figma > Settings > Security > Personal access tokens |
 
 Exemplos:
 
@@ -289,6 +290,32 @@ no modo headless ninguém aprova, então são recusadas. Duas configurações ab
 (`permissions.blockReadsOutsideWorkingDirectories`), então os agentes não confundem o projeto com o código do SQUAD/CODE
 nem com outras pastas suas. Comandos de terminal (`Bash`), quando liberados para um agente, não são isolados pelo Claude
 Code no Windows; nesse caso vale a instrução do prompt.
+
+### Agentes de design e o Figma
+
+O designer (PRISM, CANVAS e MOSAIC, categoria Design no Squad Studio) entra na rota das features de frontend, fullstack e mobile, antes de quem
+implementa a interface, e entrega a especificação (fluxo, telas, componentes, estados e acessibilidade) em `docs/design/`. A rota não muda em
+squads sem designer, e o escopo **Design / UX** (PO, designer, QA) existe para features só de design.
+
+O CANVAS e o MOSAIC leem o Figma pelo servidor MCP embutido `scripts/figma-mcp.mjs` (somente leitura: estrutura das telas, textos, cores,
+espaçamentos, componentes e estilos, e exportação de SVG). Ele usa um token pessoal da API REST, então funciona em qualquer plano, inclusive o
+gratuito, e não depende do Dev Mode:
+
+1. Em Figma > Settings > Security > Personal access tokens, gere um token com os escopos de leitura.
+2. Exporte `FIGMA_TOKEN` no terminal em que você inicia o bridge e reinicie-o:
+
+```sh
+export FIGMA_TOKEN='...'   # macOS / Linux / Git Bash
+npm start
+```
+
+```powershell
+$env:FIGMA_TOKEN = "..."; npm start   # Windows PowerShell
+```
+
+O token fica só no ambiente do bridge: não vai para o workspace, para o banco nem para o arquivo de configuração temporário da execução.
+Cada execução recebe apenas os servidores MCP marcados no agente (aba Ferramentas do estúdio), nunca os que você configurou no seu Claude Code.
+Se o bridge estiver sem `FIGMA_TOKEN`, o estúdio avisa, e as ferramentas do Figma respondem com um erro explicando o que fazer.
 
 ### Dados do workspace
 
@@ -364,7 +391,7 @@ squad-code-network/
 │   ├── portraits.js    # retratos embutidos
 │   ├── avatars.js      # galeria gerada de assets/*.png
 │   └── vendor/         # three.min.js embutido
-├── scripts/            # dev runner, geração de avatares e vendor do Three.js
+├── scripts/            # dev runner, geração de avatares, vendor do Three.js e servidor MCP do Figma
 ├── assets/             # imagens fonte dos avatares
 ├── tests/              # testes do bridge (Claude falso) e de interface
 ├── docs/GUIA.md        # guia completo das funcionalidades

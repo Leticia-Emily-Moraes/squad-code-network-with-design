@@ -557,3 +557,29 @@ test('MCP servers reach the run as --mcp-config, with --strict-mcp-config, and i
     assert.equal(r.status, 400, JSON.stringify(bad));
   }
 });
+
+test('built-in MCP server: the bridge supplies the command, the token stays a reference, and ${} from the page is refused', async () => {
+  const run = mcpServers => api('/api/runs', { method: 'POST', body: JSON.stringify({ prompt: 'hello', options: { cwd: workdir, mcpServers } }) });
+  const res = await run({ 'figma-api': { builtin: 'figma-api' } });
+  assert.equal(res.status, 201);
+  const init = (await collect((await res.json()).runId)).find(e => e.subtype === 'init');
+  const entry = init.mcp.mcpServers['figma-api'];
+  assert.equal(entry.type, 'stdio');
+  assert.equal(entry.command, process.execPath);
+  assert.equal(entry.args[0], path.join(ROOT, 'scripts', 'figma-mcp.mjs'));
+  assert.ok(existsSync(entry.args[0]));
+  // The file holds a reference, never the value: Claude Code expands it from the bridge's own environment (empty when unset).
+  assert.deepEqual(entry.env, { FIGMA_TOKEN: '${FIGMA_TOKEN:-}' });
+
+  // The page cannot ask for a server the bridge does not ship, nor smuggle references to the bridge's environment.
+  for (const bad of [
+    { k: { builtin: 'nope' } },
+    { k: { command: 'node', env: { X: '${ANTHROPIC_API_KEY}' } } },
+    { k: { command: 'node', args: ['${HOME}'] } },
+    { k: { command: '${HOME}/x' } },
+    { k: { url: 'http://127.0.0.1/${ANTHROPIC_API_KEY}' } },
+    { k: { url: 'http://127.0.0.1/mcp', headers: { Authorization: 'Bearer ${ANTHROPIC_API_KEY}' } } },
+  ]) assert.equal((await run(bad)).status, 400, JSON.stringify(bad));
+
+  assert.equal(typeof (await (await api('/api/health')).json()).figmaToken, 'boolean');
+});

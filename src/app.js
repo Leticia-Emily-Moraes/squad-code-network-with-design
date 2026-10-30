@@ -323,22 +323,24 @@ const STATUS={backlog:'A fazer',blocked:'Bloqueada',ready:'Pronta',running:'Em e
 const TOOLS=['Read','Glob','Grep','Edit','Write','Bash','WebFetch','WebSearch','NotebookEdit'];
 // MCP servers an agent can be given (a.mcp holds the keys). The key is the prefix of every tool the server publishes
 // (mcp__<key>__<tool>), so it is also what goes to --allowedTools. The bridge writes them to the run's --mcp-config.
+// `builtin` servers ship with the bridge (scripts/): the page names them and the bridge supplies the command, so they are not exported.
 const MCP_SERVERS={
- 'figma-desktop':{name:'Figma no computador',icon:'figma',desc:'Lê os arquivos abertos no app do Figma: telas, componentes, tokens e variáveis.',note:'Exige o app do Figma aberto nesta máquina durante a execução, com o servidor MCP ligado em Preferências. Não pede login.',server:{type:'http',url:'http://127.0.0.1:3845/mcp'}},
- 'figma-remote':{name:'Figma na nuvem',icon:'figma',desc:'Mesmo acesso, pelos arquivos da sua conta do Figma, sem precisar do app aberto.',note:'Pede um login OAuth no navegador. Em execução headless não há quem aprove, então autorize antes rodando claude uma vez no terminal, ou prefira a opção do computador.',warn:true,server:{type:'http',url:'https://mcp.figma.com/mcp'}}
+ 'figma-api':{name:'Figma por token (API)',icon:'figma',desc:'Lê arquivos do Figma pela API REST: telas, textos, cores, espaçamentos, componentes e estilos, e exporta SVG. Somente leitura, em qualquer plano e sem Dev Mode.',note:'Precisa de um token pessoal (Figma > Settings > Security > Personal access tokens). Exporte FIGMA_TOKEN antes de iniciar o bridge: o token fica só no ambiente dele, nunca no workspace.',needs:'figmaToken',server:{builtin:'figma-api'}},
+ 'figma-desktop':{name:'Figma no computador',icon:'figma',desc:'Lê os arquivos abertos no app do Figma: telas, componentes, tokens e variáveis.',note:'Exige plano pago com assento Full ou Dev (o servidor liga no Dev Mode) e o app aberto nesta máquina durante a execução. Não pede login. Pode expor ferramentas que alteram arquivos.',server:{type:'http',url:'http://127.0.0.1:3845/mcp'}},
+ 'figma-remote':{name:'Figma na nuvem',icon:'figma',desc:'Mesmo acesso, pelos arquivos da sua conta do Figma, sem precisar do app aberto.',note:'Pede um login OAuth no navegador. Em execução headless não há quem aprove, então autorize antes rodando claude uma vez no terminal. No plano gratuito (assento View) o limite é de 20 chamadas por mês. Pode expor ferramentas que alteram arquivos.',warn:true,server:{type:'http',url:'https://mcp.figma.com/mcp'}}
 };
 const MAX_AGENT_MCP=6;
 function mcpFieldHTML(a){
  const on=mcpOf(a);
- const card=([k,m])=>'<label class="check-card"><input type="checkbox" name="mcp" value="'+E(k)+'" '+(on.includes(k)?'checked':'')+'><span><strong>'+E(m.name)+'</strong><small>'+E(m.desc)+' '+E(m.note)+'</small></span></label>';
+ const card=([k,m])=>'<label class="check-card"><input type="checkbox" name="mcp" value="'+E(k)+'" '+(on.includes(k)?'checked':'')+'><span><strong>'+E(m.name)+'</strong><small>'+E(m.desc)+' '+E(m.note)+(m.needs==='figmaToken'&&ui.bridge?.online&&ui.bridge.figmaToken===false?' <b style="color:#c5b995">O bridge atual não tem FIGMA_TOKEN no ambiente: as ferramentas vão responder com erro até você exportar a variável e reiniciá-lo.</b>':'')+'</small></span></label>';
  return '<div class="eyebrow" style="margin:26px 0 15px">SERVIDORES MCP</div><div class="check-grid">'+Object.entries(MCP_SERVERS).map(card).join('')+'</div>'
   +'<div class="notice warning">'+icon('lock')+'<span>Um servidor MCP é uma porta para fora da pasta da operação: o que ele devolve não passa pelo bloqueio de leitura do bridge. As execuções deste agente recebem só os servidores marcados aqui (<code>--strict-mcp-config</code>), nunca os que você configurou no seu próprio Claude Code.</span></div>';
 }
 const mcpOf=a=>(a?.mcp||[]).filter(k=>Object.hasOwn(MCP_SERVERS,k));
 // {chave: definição} for the run options and for the export; the same agent key never repeats.
-function mcpServersFor(list){const out={};for(const a of list||[])for(const k of mcpOf(a))out[k]=MCP_SERVERS[k].server;return out;}
+function mcpServersFor(list,forExport=false){const out={};for(const a of list||[])for(const k of mcpOf(a))if(!(forExport&&MCP_SERVERS[k].server.builtin))out[k]=MCP_SERVERS[k].server;return out;}
 // Tool names to allow so the headless run is not denied: the whole server, by prefix.
-const mcpToolsOf=a=>mcpOf(a).map(k=>'mcp__'+k);
+const mcpToolsOf=(a,forExport=false)=>mcpOf(a).filter(k=>!(forExport&&MCP_SERVERS[k].server.builtin)).map(k=>'mcp__'+k);
 const TOOL_INFO={Read:'Leitura de arquivos',Glob:'Busca por arquivos',Grep:'Busca por conteúdo',Edit:'Edição de arquivos',Write:'Criação de arquivos',Bash:'Comandos de terminal',WebFetch:'Buscar páginas web',WebSearch:'Pesquisa na web',NotebookEdit:'Editar notebooks'};
 const PERMISSION_MODES={acceptEdits:'acceptEdits / edita arquivos, nega o resto',plan:'plan / somente leitura e planejamento',auto:'auto / classificador decide',dontAsk:'dontAsk / nega o que exigiria aprovação',manual:'manual / padrão (headless nega prompts)',bypassPermissions:'bypassPermissions / SEM VERIFICAÇÕES'};
 const EFFORTS=['','low','medium','high','xhigh','max'];
@@ -928,7 +930,7 @@ function projectExportFiles(p){
  const list=[...byId.values()],used=new Set();for(const m of list){const base=agentSlug(m.a);let s=base,n=2;while(used.has(s))s=`${base}-${n++}`;used.add(s);m.slug=s;}
  const slugFor=aid=>byId.get(aid)?.slug,ref=aid=>slugFor(aid)?'`'+slugFor(aid)+'`':'',cmd=list.find(m=>m.slots.includes('commander')),adr=list.find(m=>m.slots.includes('adr')),prd=list.find(m=>m.slots.includes('prd'));
  const cmdRef=cmd?`\`${cmd.slug}\``:'o comandante',adrRef=adr?`\`${adr.slug}\``:'o reconhecedor ADR',prdRef=prd?`\`${prd.slug}\``:'o reconhecedor PRD',members=list.map(m=>m.a);
- const mcpAll=mcpServersFor(members),mcpKeys=Object.keys(mcpAll);
+ const mcpAll=mcpServersFor(members,true),mcpKeys=Object.keys(mcpAll),bridgeOnly=members.filter(a=>mcpOf(a).some(k=>MCP_SERVERS[k].server.builtin));
  // Routes (same role mapping as routeFor); a feature keeps its applied route when it is inside the squad.
  const scopeRoute=scope=>{const route=[],missing=[];for(const role of scopeRoles(scope)){const a=(ROLE_FAMILY[role]||[role]).map(x=>members.find(y=>y.role===x)).find(Boolean);if(a)route.push(a.id);else if(!routeOptional(role,scope))missing.push(ROLES[role].label);}return{route,missing};};
  const featureRoute=f=>f.route?.length&&f.route.every(x=>byId.has(x))?{route:f.route,missing:[]}:scopeRoute(f.scope);
@@ -1000,7 +1002,7 @@ function projectExportFiles(p){
   // Subagents cannot call other subagents: the commander orchestrates only as the main session (claude --agent <slug>), with the Agent tool.
   const orchestration=main==='commander'?['','## Como orquestrar no Claude Code',`- Como sessão principal (\`claude --agent ${m.slug}\`): delegue cada etapa com a ferramenta Agent ao subagente da rota da feature, uma etapa por vez. No prompt de cada etapa envie o briefing, a spec, os critérios de aceitação e as tarefas da feature, as entregas das dependências e os resumos de handoff das etapas anteriores.`,'- Nunca pule o PRD e o ADR quando a rota os incluir, e pare ao final da rota para a revisão humana.','- Quando chamado como subagente, você não delega: devolva o plano de distribuição (feature → rota, dependências e riscos) para a sessão principal executar.']:[];
   const handoff=['','## Handoff','- Ao terminar sua etapa, responda com um resumo de handoff para o próximo especialista da rota: o que foi feito, arquivos alterados, decisões, pendências e o próximo passo.','- Se for a última etapa, entregue um relatório para a revisão humana: o que foi entregue, arquivos alterados, evidências de verificação executadas, lacunas e riscos.','- Não declare testes ou verificações que não executou.','- Responda em português do Brasil.'];
-  const tools=[...new Set([...(main==='commander'?[...a.tools,'Agent']:a.tools),...mcpToolsOf(a)])],fam=a.conventions?.family||conventionFamilyOf(a);
+  const tools=[...new Set([...(main==='commander'?[...a.tools,'Agent']:a.tools),...mcpToolsOf(a,true)])],fam=a.conventions?.family||conventionFamilyOf(a);
   return{name:`.claude/agents/${m.slug}.md`,data:modernDocPaths(agentMarkdown(a,{slug:m.slug,description,tools,color:agentColor(a,main),extra:[...position,...(WHERE[main]||[]),...orchestration,...handoff].join('\n')}),fam==='adr')};});
  // Slash commands: the orchestration the SQUAD/CODE runner does, for the terminal (review -> human approval -> done).
  const commandFiles=[
@@ -1030,7 +1032,7 @@ function projectExportFiles(p){
   '| `docs/architecture/` | `overview.md` (visão geral e índice de decisões), `adr/ADR-NNN-*.md` e `diagrams/`. |',
   '| `docs/standards/` | `coding-style`, `api-guidelines`, `database-guidelines`, `git-conventions` e `security-guidelines`, compilados das diretrizes da squad. |',
   '| `docs/features/<NNN-feature>/` | `spec.md` (frontmatter com `status`), `acceptance-criteria.md` e `tasks.md`. |',
-  '| `.claude/agents/` | Subagentes da squad. |','| `.claude/commands/` | `/planejar-operacao`, `/executar-sprint` e `/executar-feature`. |','| `.claude/settings.json` | Permissões do Claude Code. |',...(mcpKeys.length?['| `.mcp.json` | Servidores MCP dos agentes que usam um. |']:[]),'',
+  '| `.claude/agents/` | Subagentes da squad. |','| `.claude/commands/` | `/planejar-operacao`, `/executar-sprint` e `/executar-feature`. |','| `.claude/settings.json` | Permissões do Claude Code. |',...(mcpKeys.length?['| `.mcp.json` | Servidores MCP dos agentes que usam um. |']:[]),...(bridgeOnly.length?['',`${bridgeOnly.length>1?'Os agentes':'O agente'} ${bridgeOnly.map(a=>a.name).join(', ')} ${bridgeOnly.length>1?'usam':'usa'} o servidor MCP \`figma-api\` (leitura do Figma por token), que é do SQUAD/CODE (\`scripts/figma-mcp.mjs\`) e não vai neste pacote. Para ter o Figma aqui, configure um servidor MCP do Figma e libere as ferramentas dele para ${bridgeOnly.length>1?'esses agentes':'esse agente'}.`]:[]),'',
   'Estes caminhos prevalecem sobre caminhos citados nos guias dos agentes.','',
   '## Cadeia de comando','','| Camada | Posição | Agente | Especialidade | Modelo | Esforço | Subagente |','|---|---|---|---|---|---|---|',...list.flatMap(m=>m.slots.map(s=>`| ${LAYER[s]} | ${POS[s]} | ${cell(m.a.name)} | ${cell(roleLabel(m.a))} | \`${m.a.model}\` | ${m.a.effort&&modelEffortSupport(m.a.model)?`\`${m.a.effort}\``:'padrão'} | \`${m.slug}\` |`)),'',
   '## Como trabalhamos','',
@@ -1988,7 +1990,7 @@ async function checkBridge(notify=false){
  if(!BRIDGE_TOKEN){ui.bridge={online:false,checked:true,version:null,error:'Página aberta sem o bridge.'};renderIndicator();return ui.bridge;}
  try{
   const h=await bridgeFetch('/api/health'+(runtime().claudePath?'?claudePath='+encodeURIComponent(runtime().claudePath):''));
-  ui.bridge={online:!!h.claudeVersion,checked:true,version:h.claudeVersion,path:h.claudePath,error:h.claudeError,defaultCwd:h.defaultCwd,projectsDir:h.projectsDir,home:h.home,platform:h.platform};
+  ui.bridge={online:!!h.claudeVersion,checked:true,version:h.claudeVersion,path:h.claudePath,error:h.claudeError,defaultCwd:h.defaultCwd,projectsDir:h.projectsDir,home:h.home,platform:h.platform,figmaToken:h.figmaToken};
   bridgeFetch('/api/config',{method:'POST',body:JSON.stringify({concurrency:runtime().concurrency})}).catch(()=>{});
   if(notify)toast(h.claudeVersion?`Claude Code ${h.claudeVersion} conectado.`:`Bridge ativo, mas o Claude Code falhou: ${h.claudeError}`,h.claudeVersion?'ok':'error');
  }catch(error){ui.bridge={online:false,checked:true,version:null,error:error.message};if(notify)toast(error.message,'error');}
@@ -2883,8 +2885,8 @@ const OP_CATEGORIES=[
   {name:'INSIGHT',role:'data',specialty:'Analytics / BI',icon:'chart',description:'Métricas, dashboards e modelos analíticos para decisões de produto.'}]},
  {key:'design',label:'Design',icon:'palette',roles:['designer'],description:'Fluxos, wireframes e interfaces acessíveis.',presets:[
   {name:'PRISM',role:'designer',icon:'palette'},
-  {name:'CANVAS',role:'designer',specialty:'Figma / UI',icon:'figma',mcp:['figma-desktop'],description:'Lê o design no Figma e escreve a especificação de tela e componente para o frontend.'},
-  {name:'MOSAIC',role:'designer',specialty:'Design system',icon:'layers',mcp:['figma-desktop'],description:'Tokens, componentes e documentação do design system.'}]},
+  {name:'CANVAS',role:'designer',specialty:'Figma / UI',icon:'figma',mcp:['figma-api'],description:'Lê o design no Figma e escreve a especificação de tela e componente para o frontend.'},
+  {name:'MOSAIC',role:'designer',specialty:'Design system',icon:'layers',mcp:['figma-api'],description:'Tokens, componentes e documentação do design system.'}]},
  {key:'docs',label:'Documentação',icon:'book',roles:['docs'],description:'README, guias, docs de API e changelogs.',presets:[
   {name:'SCRIBE',role:'docs',icon:'book'},
   {name:'LEXICON',role:'docs',specialty:'Docs de API',icon:'braces',description:'Referência de API (OpenAPI), exemplos de requisição e erros.'},
