@@ -71,8 +71,9 @@ const MCP_TYPES = ['http', 'sse', 'stdio'];
 const MAX_MCP = 10;
 // Servers the bridge ships (scripts/): the page asks for them by name, so it never supplies their command, and their secret is a
 // reference to the bridge's own environment, expanded by Claude Code (${VAR:-}, empty when unset) instead of written to the temp file.
+const BUILTIN_MCP_FILES = { 'figma-api': 'figma-mcp.mjs' };
 const BUILTIN_MCP = {
-  'figma-api': () => ({ type: 'stdio', command: process.execPath, args: [path.join(ROOT, 'scripts', 'figma-mcp.mjs')], env: { FIGMA_TOKEN: '${FIGMA_TOKEN:-}' } }),
+  'figma-api': () => ({ type: 'stdio', command: process.execPath, args: [path.join(ROOT, 'scripts', BUILTIN_MCP_FILES['figma-api'])], env: { FIGMA_TOKEN: '${FIGMA_TOKEN:-}' } }),
 };
 const MAX_EVENTS = 5000;
 const MAX_BODY = 2 * 1024 * 1024;
@@ -567,6 +568,13 @@ async function handle(req, res) {
     }
     // First start: the page creates the database with the workspace the person chose (from scratch, the example, a backup or the
     // browser's copy). Validated before anything is written; refused once a workspace exists.
+    // The code of a built-in MCP server, so the export can ship it with the project (the page has no copy of it).
+    const builtinSource = url.pathname.match(/^\/api\/mcp\/([a-z0-9-]+)\/source$/);
+    if (req.method === 'GET' && builtinSource) {
+      const file = Object.hasOwn(BUILTIN_MCP_FILES, builtinSource[1]) ? BUILTIN_MCP_FILES[builtinSource[1]] : '';
+      if (!file) return fail(res, 404, 'Servidor MCP embutido não encontrado.');
+      return json(res, 200, { ok: true, file, source: await fsp.readFile(path.join(ROOT, 'scripts', file), 'utf8') });
+    }
     if (req.method === 'POST' && url.pathname === '/api/setup') {
       const body = await readBody(req, MAX_WORKSPACE);
       if (!setupNeeded()) return json(res, 409, { ok: false, conflict: true, path: store.file, error: 'Já existe um banco de dados com um workspace. Recarregue a página.' });

@@ -3,6 +3,10 @@
 // It talks to the Figma REST API with a personal access token (FIGMA_TOKEN), so it works on every plan, without Dev Mode.
 // Only GET requests are ever made: nothing here can change a Figma file. The bridge starts it for the agents that have it
 // (server.js, BUILTIN_MCP) and hands the token over from its own environment; it is never written to a file.
+import { createHash } from 'node:crypto';
+import { mkdirSync, readFileSync, writeFileSync, renameSync, readdirSync, statSync, unlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 
 const VERSION = '1.0.0';
@@ -13,6 +17,12 @@ const MAX_SVGS = 5;
 const MAX_SVG_CHARS = 20000;
 const MAX_LIST = 300;
 const TIMEOUT_MS = 30000;
+
+// Answers are kept on disk for a few minutes, so the same file read twice (in this run or the next) costs one request of the person's
+// Figma limit. The key hashes the token with the URL, so another account never reads this one's cache; the folder is private to the user.
+// Every call can skip it with fresh. FIGMA_CACHE_TTL_S=0 turns it off; FIGMA_CACHE_DIR moves it (tests).
+const CACHE_TTL_MS = (() => { const s = Number(process.env.FIGMA_CACHE_TTL_S ?? 300); return (Number.isFinite(s) && s >= 0 ? s : 300) * 1000; })();
+const CACHE_DIR = process.env.FIGMA_CACHE_DIR || join(tmpdir(), 'squad-figma-cache');
 
 // The token only ever goes to api.figma.com. FIGMA_API_BASE exists for the tests and must be a loopback address.
 const BASE = (() => {
@@ -63,13 +73,41 @@ function httpError(res) {
   }
 }
 
-async function figma(path, params = {}) {
+const cacheFile = url => join(CACHE_DIR, createHash('sha256').update(`${TOKEN}\n${url.href}`).digest('hex') + '.json');
+
+function cacheRead(url) {
+  if (!CACHE_TTL_MS) return null;
+  try { const entry = JSON.parse(readFileSync(cacheFile(url), 'utf8')); return Date.now() - entry.at < CACHE_TTL_MS ? entry : null; } catch { return null; }
+}
+
+let pruned = false;
+// A cache problem never breaks a call: every failure here is swallowed.
+function cacheWrite(url, body) {
+  if (!CACHE_TTL_MS) return;
+  try {
+    mkdirSync(CACHE_DIR, { recursive: true, mode: 0o700 });
+    const file = cacheFile(url), tmp = `${file}.${process.pid}.tmp`;
+    writeFileSync(tmp, JSON.stringify({ at: Date.now(), body }), { mode: 0o600 });
+    renameSync(tmp, file);
+    if (!pruned) { // once per process: entries older than a day go away, so the folder never grows without bound
+      pruned = true;
+      const limit = Date.now() - 86400000;
+      for (const name of readdirSync(CACHE_DIR)) { try { const f = join(CACHE_DIR, name); if (statSync(f).mtimeMs < limit) unlinkSync(f); } catch {} }
+    }
+  } catch {}
+}
+
+async function figma(path, params = {}, { fresh = false } = {}) {
   if (!TOKEN) throw new Error('FIGMA_TOKEN não está definido no ambiente do bridge. Gere um token em Figma > Settings > Security > Personal access tokens e inicie o bridge com FIGMA_TOKEN exportado.');
   const url = new URL(path, BASE);
   for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== '') url.searchParams.set(k, String(v));
+  const hit = fresh ? null : cacheRead(url);
+  if (hit) return { data: hit.body, cachedAt: new Date(hit.at).toISOString() };
   const res = await fetch(url, { headers: { 'X-Figma-Token': TOKEN }, signal: AbortSignal.timeout(TIMEOUT_MS) });
   if (!res.ok) throw new Error(httpError(res));
-  return res.json();
+  const data = await res.json();
+  cacheWrite(url, data);
+  return { data };
 }
 
 // What a designer reads from a node: size, layout, color, type and text. Everything else in the raw tree is noise for the model.
@@ -122,6 +160,7 @@ async function svgText(url) {
 
 const FILE = { type: 'string', description: 'Chave do arquivo do Figma ou o link completo (figma.com/design/<chave>/...).' };
 const IDS = { type: 'array', items: { type: 'string' }, description: 'Ids de nós, como "1:2". Se faltar, vale o node-id do link.' };
+const FRESH = { type: 'boolean', description: 'Ignora o cache de 5 minutos e pergunta de novo ao Figma. Use depois que o arquivo foi alterado.' };
 const READ_ONLY = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true };
 
 const TOOLS = [
@@ -129,43 +168,43 @@ const TOOLS = [
     name: 'figma_whoami', title: 'Conta do token do Figma', annotations: READ_ONLY,
     description: 'Confirma que o token do Figma funciona e devolve o nome da conta. Use para diagnosticar acesso.',
     inputSchema: { type: 'object', properties: {} },
-    async run() { const me = await figma('/v1/me'); return { handle: me.handle, id: me.id }; },
+    async run() { const { data: me } = await figma('/v1/me', {}, { fresh: true }); return { handle: me.handle, id: me.id }; },
   },
   {
     name: 'figma_get_file', title: 'Estrutura de um arquivo do Figma', annotations: READ_ONLY,
     description: 'Lê um arquivo do Figma e devolve as páginas e as telas de cada uma, resumidas (tamanho, layout, cores, textos, fontes). Comece por aqui, com depth 2, e aprofunde com figma_get_nodes.',
     inputSchema: { type: 'object', properties: { file: FILE, depth: { type: 'integer', minimum: 1, maximum: 4, description: '1 = só páginas, 2 = páginas e telas (padrão), 3 e 4 descem mais.' } }, required: ['file'] },
-    async run({ file, depth }) {
+    async run({ file, depth, fresh }) {
       const { key } = parseFile(file), d = Math.round(clamp(depth, 1, 4, 2));
-      const data = await figma(`/v1/files/${key}`, { depth: d });
-      return { name: data.name, lastModified: data.lastModified, version: data.version, pages: (data.document?.children || []).map(p => summarize(p, d - 1)) };
+      const { data, cachedAt } = await figma(`/v1/files/${key}`, { depth: d }, { fresh });
+      return { name: data.name, lastModified: data.lastModified, version: data.version, cached: cachedAt, pages: (data.document?.children || []).map(p => summarize(p, d - 1)) };
     },
   },
   {
     name: 'figma_get_nodes', title: 'Nós específicos de um arquivo do Figma', annotations: READ_ONLY,
     description: 'Lê telas ou componentes pelo id e devolve a árvore resumida: tamanho, posição, auto layout, espaçamentos, cores, bordas, raio, sombras, textos e fontes. Use detail "full" para o JSON bruto do Figma.',
     inputSchema: { type: 'object', properties: { file: FILE, ids: IDS, depth: { type: 'integer', minimum: 1, maximum: 6, description: 'Quantos níveis abaixo de cada nó (padrão 3).' }, detail: { type: 'string', enum: ['summary', 'full'] } }, required: ['file'] },
-    async run({ file, ids, depth, detail }) {
+    async run({ file, ids, depth, detail, fresh }) {
       const { key, nodeId: fromLink } = parseFile(file), list = idsOf(ids, fromLink), d = Math.round(clamp(depth, 1, 6, 3));
-      const data = await figma(`/v1/files/${key}/nodes`, { ids: list.join(','), depth: d });
+      const { data, cachedAt } = await figma(`/v1/files/${key}/nodes`, { ids: list.join(','), depth: d }, { fresh });
       const nodes = {};
       for (const id of list) {
         const doc = data.nodes?.[id]?.document;
         nodes[id] = doc ? (detail === 'full' ? doc : summarize(doc, d)) : null;
       }
-      return { name: data.name, lastModified: data.lastModified, nodes };
+      return { name: data.name, lastModified: data.lastModified, cached: cachedAt, nodes };
     },
   },
   {
     name: 'figma_export_images', title: 'Exportar nós do Figma como imagem', annotations: READ_ONLY,
     description: 'Exporta nós como png, jpg, svg ou pdf. Para svg, devolve o código inline (até 5 nós), pronto para gravar em um arquivo do projeto; nos outros formatos devolve URLs temporárias.',
     inputSchema: { type: 'object', properties: { file: FILE, ids: IDS, format: { type: 'string', enum: ['png', 'jpg', 'svg', 'pdf'] }, scale: { type: 'number', minimum: 0.01, maximum: 4, description: 'Escala de 0,01 a 4 (padrão 1).' } }, required: ['file'] },
-    async run({ file, ids, format, scale }) {
+    async run({ file, ids, format, scale, fresh }) {
       const { key, nodeId: fromLink } = parseFile(file), list = idsOf(ids, fromLink);
       const fmt = ['png', 'jpg', 'svg', 'pdf'].includes(format) ? format : 'png';
-      const data = await figma(`/v1/images/${key}`, { ids: list.join(','), format: fmt, scale: clamp(scale, 0.01, 4, 1) });
+      const { data, cachedAt } = await figma(`/v1/images/${key}`, { ids: list.join(','), format: fmt, scale: clamp(scale, 0.01, 4, 1) }, { fresh });
       if (data.err) throw new Error(`O Figma não exportou: ${String(data.err).slice(0, 200)}`);
-      const out = { images: data.images || {} };
+      const out = { images: data.images || {}, cached: cachedAt };
       if (fmt === 'svg') {
         out.svg = {};
         for (const [id, url] of Object.entries(out.images).filter(([, u]) => u).slice(0, MAX_SVGS)) out.svg[id] = await svgText(url).catch(() => null);
@@ -177,17 +216,21 @@ const TOOLS = [
     name: 'figma_get_design_system', title: 'Componentes e estilos de um arquivo do Figma', annotations: READ_ONLY,
     description: 'Lista os componentes e os estilos (cor, texto, efeito) publicados no arquivo, com nome, descrição e id do nó. Use o id em figma_get_nodes para ver os detalhes. Variáveis não estão disponíveis (a API só as libera no plano Enterprise).',
     inputSchema: { type: 'object', properties: { file: FILE }, required: ['file'] },
-    async run({ file }) {
+    async run({ file, fresh }) {
       const { key } = parseFile(file);
-      const [components, styles] = await Promise.allSettled([figma(`/v1/files/${key}/components`), figma(`/v1/files/${key}/styles`)]);
-      const part = (r, map) => r.status === 'fulfilled' ? (r.value.meta?.[map.key] || []).slice(0, MAX_LIST).map(map.fn) : { error: explain(r.reason) };
+      const [components, styles] = await Promise.allSettled([figma(`/v1/files/${key}/components`, {}, { fresh }), figma(`/v1/files/${key}/styles`, {}, { fresh })]);
+      const part = (r, map) => r.status === 'fulfilled' ? (r.value.data.meta?.[map.key] || []).slice(0, MAX_LIST).map(map.fn) : { error: explain(r.reason) };
+      const cached = [components, styles].filter(r => r.status === 'fulfilled').map(r => r.value.cachedAt).filter(Boolean).sort()[0];
       return {
+        cached,
         components: part(components, { key: 'components', fn: c => ({ name: c.name, description: c.description || undefined, node: c.node_id, frame: c.containing_frame?.name }) }),
         styles: part(styles, { key: 'styles', fn: s => ({ name: s.name, type: s.style_type, description: s.description || undefined, node: s.node_id }) }),
       };
     },
   },
 ];
+
+for (const tool of TOOLS) if (tool.inputSchema.properties.file) tool.inputSchema.properties.fresh = FRESH;
 
 const text = value => {
   const s = typeof value === 'string' ? value : JSON.stringify(value);

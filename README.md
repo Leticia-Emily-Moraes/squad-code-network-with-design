@@ -297,7 +297,7 @@ O designer (PRISM, CANVAS e MOSAIC, categoria Design no Squad Studio) entra na r
 implementa a interface, e entrega a especificação (fluxo, telas, componentes, estados e acessibilidade) em `docs/design/`. A rota não muda em
 squads sem designer, e o escopo **Design / UX** (PO, designer, QA) existe para features só de design.
 
-O CANVAS e o MOSAIC leem o Figma pelo servidor MCP embutido `scripts/figma-mcp.mjs` (somente leitura: estrutura das telas, textos, cores,
+O PRISM, o CANVAS e o MOSAIC leem o Figma pelo servidor MCP embutido `scripts/figma-mcp.mjs` (somente leitura: estrutura das telas, textos, cores,
 espaçamentos, componentes e estilos, e exportação de SVG). Ele usa um token pessoal da API REST, então funciona em qualquer plano, inclusive o
 gratuito, e não depende do Dev Mode:
 
@@ -316,6 +316,14 @@ $env:FIGMA_TOKEN = "..."; npm start   # Windows PowerShell
 O token fica só no ambiente do bridge: não vai para o workspace, para o banco nem para o arquivo de configuração temporário da execução.
 Cada execução recebe apenas os servidores MCP marcados no agente (aba Ferramentas do estúdio), nunca os que você configurou no seu Claude Code.
 Se o bridge estiver sem `FIGMA_TOKEN`, o estúdio avisa, e as ferramentas do Figma respondem com um erro explicando o que fazer.
+
+O link do arquivo vai no campo **Arquivo do Figma** do briefing da operação: o designer recebe o link no prompt de cada etapa, e ele vai
+também para o `docs/project/briefing.md` exportado. As respostas do Figma ficam em cache por 5 minutos numa pasta temporária só sua, para o
+mesmo arquivo não gastar duas requisições do seu limite; o agente pede dados novos com `fresh: true` depois de uma mudança no arquivo.
+
+Ao exportar a operação com o bridge ligado, o servidor vai junto em `.claude/mcp/` (com o `.mcp.json`), então o repositório exportado também
+lê o Figma: exporte `FIGMA_TOKEN` e aprove o servidor do projeto na primeira vez que abrir o Claude Code. Exportando pelo `index.html` (demo),
+o servidor não vai, e o `CLAUDE.md` exportado avisa.
 
 ### Dados do workspace
 

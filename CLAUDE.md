@@ -105,7 +105,10 @@ their command: `figma-api` (`scripts/figma-mcp.mjs`: read-only, no dependencies,
 plan without Dev Mode) gets `FIGMA_TOKEN: '${FIGMA_TOKEN:-}'`, so the token comes from the environment the bridge was started in
 and is never in the workspace or in the temp file. The `:-` matters (checked against the real `claude`): without it an unset
 variable reaches the server as the literal text. The server only issues GET requests, answers tool errors as `isError` text
-(never the token) and refuses a `FIGMA_API_BASE` that is not loopback (tests only). `/api/health` reports `figmaToken`.
+(never the token) and refuses a `FIGMA_API_BASE` that is not loopback (tests only). `/api/health` reports `figmaToken`. `GET /api/mcp/<name>/source` hands over the
+code of a built-in server (`BUILTIN_MCP_FILES`) so the export can ship it. The server caches JSON answers on disk for 5 minutes
+(`FIGMA_CACHE_TTL_S`, `FIGMA_CACHE_DIR`; key = sha256 of token + URL, private folder; errors and `figma_whoami` are never cached;
+every tool takes `fresh`).
 
 **`src/app.js` (state, UI, orchestration).**
 - One persisted `state` object (localStorage key `squad-code.network.v2`, export/import as JSON). Served by the bridge, the database
@@ -254,9 +257,14 @@ variable reaches the server as the literal text. The server only issues GET requ
   squad has one (never reported as missing); scope `designer` is po > designer > qa, with the designer required.
 - MCP per agent: `a.mcp` holds keys of `MCP_SERVERS` (persisted in `normalizeWorkspace`, `presetDefaults`); `runOptionsFor` sends
   `mcpServers` and allows `mcp__<key>` (the whole server, by prefix), `claudeArgs` mirrors the flags, `CHAT_RUN` clears them (a chat
-  turn has no tools). The studio's FERRAMENTAS tab shows `mcpFieldHTML`, with a warning when the bridge has no `FIGMA_TOKEN`. Export
-  writes `.mcp.json` and the `mcp__` tools of each agent's frontmatter except `builtin` servers, which are bridge-only (CLAUDE.md
-  says so). The catalog design agents CANVAS and MOSAIC come with `figma-api`. A new server is one `MCP_SERVERS` entry.
+  turn has no tools). The studio's FERRAMENTAS tab shows `mcpFieldHTML`, with a warning when the bridge has no `FIGMA_TOKEN`. `exportProject` (async) asks the bridge for the code of the built-in servers the squad uses and passes it as `have`
+  to `projectExportFiles`: with it the package carries `.claude/mcp/<file>`, `.mcp.json` (relative path, `MCP_SERVERS[k].export`) and the
+  `mcp__` tools in the agents' frontmatter; without it (demo) built-in servers stay out and CLAUDE.md says so. The catalog design agents
+  (PRISM, CANVAS, MOSAIC) come with `figma-api`; `migrateCatalogAgents` v3 (`catalogVersion` 3) adds it once to existing ones that have
+  none or only the old `figma-desktop` default, never swapping a choice. `project.figmaUrl` (persisted; `figmaLink` accepts only
+  figma.com design/file links) is in the operation form, in `buildStepPrompt` (`figmaStepBlock`, only for agents with a Figma server) and
+  in the exported `docs/project/briefing.md`; `agentSystemPrompt(a,{figma:true})` appends `FIGMA_GUIDE` (live steps, command preview and
+  exports that carry the server; never chats or colleagues). A new server is one `MCP_SERVERS` entry.
 - Agents: `ROLES` defines specialties; Squad Studio presets come from `AGENT_PRESETS` and
   `OP_CATEGORIES` (operators picked by category → sub-specialty, generalist first) and are
   materialized by `createPresetAgent`. Each agent has `model` (catalog `CLAUDE_MODELS`: aliases, pinned IDs, `inherit`;

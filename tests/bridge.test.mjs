@@ -583,3 +583,14 @@ test('built-in MCP server: the bridge supplies the command, the token stays a re
 
   assert.equal(typeof (await (await api('/api/health')).json()).figmaToken, 'boolean');
 });
+
+test('built-in MCP server source is served for the export, only with the token, and only for known names', async () => {
+  const res = await api('/api/mcp/figma-api/source');
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.file, 'figma-mcp.mjs');
+  assert.equal(body.source, readFileSync(path.join(ROOT, 'scripts', 'figma-mcp.mjs'), 'utf8'));
+  assert.equal((await api('/api/mcp/nope/source')).status, 404);
+  assert.equal((await api('/api/mcp/__proto__/source')).status, 404);
+  assert.notEqual((await fetch(`${BASE}/api/mcp/figma-api/source`)).status, 200);
+});

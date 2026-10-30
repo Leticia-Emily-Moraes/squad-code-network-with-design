@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { createInterface } from 'node:readline';
+import { mkdtempSync, rmSync, statSync, readdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -54,7 +56,7 @@ after(() => fake.close());
 
 /** Starts the MCP server and talks to it like a client would. */
 function client(env = {}) {
-  const proc = spawn(process.execPath, [SCRIPT], { env: { ...process.env, FIGMA_API_BASE: base, FIGMA_TOKEN: TOKEN, ...env }, stdio: ['pipe', 'pipe', 'pipe'] });
+  const proc = spawn(process.execPath, [SCRIPT], { env: { ...process.env, FIGMA_API_BASE: base, FIGMA_TOKEN: TOKEN, FIGMA_CACHE_TTL_S: '0', ...env }, stdio: ['pipe', 'pipe', 'pipe'] });
   const waiting = new Map(), lines = [];
   let seq = 0;
   createInterface({ input: proc.stdout }).on('line', line => { lines.push(line); const m = JSON.parse(line); waiting.get(m.id)?.(m); });
@@ -202,4 +204,61 @@ test('only GET reaches the API, and a remote FIGMA_API_BASE is refused at start'
   const code = await new Promise(r => proc.once('exit', r));
   assert.equal(code, 1);
   assert.match(err, /FIGMA_API_BASE/);
+});
+
+test('cache: the same read costs one request, in this run and the next; fresh, another depth, errors and whoami skip it', async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'squad-figma-cache-'));
+  const env = { FIGMA_CACHE_TTL_S: '300', FIGMA_CACHE_DIR: dir };
+  const c = client(env), other = client(env);
+  requests.length = 0;
+  const first = await c.tool('figma_get_file', { file: 'FILEKEY12345', depth: 2 });
+  const again = await c.tool('figma_get_file', { file: 'FILEKEY12345', depth: 2 });
+  assert.equal(requests.length, 1);
+  assert.equal(first.json.cached, undefined);
+  assert.match(again.json.cached, /^\d{4}-\d{2}-\d{2}T/);
+  delete again.json.cached;
+  assert.deepEqual(again.json, first.json);
+
+  // The next run is another process: it reads what this one kept.
+  assert.match((await other.tool('figma_get_file', { file: 'FILEKEY12345', depth: 2 })).json.cached, /^\d{4}/);
+  assert.equal(requests.length, 1);
+
+  await c.tool('figma_get_file', { file: 'FILEKEY12345', depth: 3 });
+  assert.equal(requests.length, 2, 'another depth is another request');
+  assert.equal((await c.tool('figma_get_file', { file: 'FILEKEY12345', depth: 2, fresh: true })).json.cached, undefined);
+  assert.equal(requests.length, 3, 'fresh asks Figma again');
+  await c.tool('figma_whoami'); await c.tool('figma_whoami');
+  assert.equal(requests.length, 5, 'whoami is a diagnosis and is never cached');
+  await c.tool('figma_get_file', { file: 'DENIEDKEY123' }); await c.tool('figma_get_file', { file: 'DENIEDKEY123' });
+  assert.equal(requests.length, 7, 'errors are not cached');
+
+  // Another account never reads this one's entries (the key hashes the token).
+  const stranger = client({ ...env, FIGMA_TOKEN: 'another-token' });
+  const denied = await stranger.tool('figma_get_file', { file: 'FILEKEY12345', depth: 2 });
+  assert.ok(denied.isError && /403/.test(denied.text));
+  assert.equal(requests.length, 8);
+
+  if (process.platform !== 'win32') {
+    assert.equal(statSync(dir).mode & 0o077, 0, 'the folder is private to the user');
+    for (const name of readdirSync(dir)) assert.equal(statSync(path.join(dir, name)).mode & 0o077, 0);
+  }
+  for (const x of [c, other, stranger]) await x.close();
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('cache: entries expire, and a cache that cannot be written never breaks a call', async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'squad-figma-cache-'));
+  const c = client({ FIGMA_CACHE_TTL_S: '0.3', FIGMA_CACHE_DIR: dir });
+  requests.length = 0;
+  await c.tool('figma_get_file', { file: 'FILEKEY12345' });
+  await new Promise(r => setTimeout(r, 450));
+  assert.equal((await c.tool('figma_get_file', { file: 'FILEKEY12345' })).json.cached, undefined);
+  assert.equal(requests.length, 2, 'a stale entry is asked again');
+  await c.close();
+  rmSync(dir, { recursive: true, force: true });
+
+  const broken = client({ FIGMA_CACHE_TTL_S: '300', FIGMA_CACHE_DIR: '/dev/null/never' });
+  const r = await broken.tool('figma_get_file', { file: 'FILEKEY12345' });
+  assert.ok(!r.isError && r.json.name === 'App');
+  await broken.close();
 });
