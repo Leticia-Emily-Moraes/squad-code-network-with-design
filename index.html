@@ -11386,7 +11386,7 @@ function projectExportFiles(p,have={}){
  ];
  const routes=[],gaps=[];for(const [scope,label] of Object.entries(SCOPES)){const sr=scopeRoute(scope);if(sr.missing.length)gaps.push(label);else routes.push(`| ${label} | ${routeText(sr.route)} |`);}
  const bypass=r.permissionMode==='bypassPermissions';
- const flags=[`--permission-mode ${bypass?'bypassPermissions':(r.permissionMode==='manual'?'default':r.permissionMode)}`,r.model?`--model ${r.model}`:'',r.effort?`--effort ${r.effort}`:'',r.maxBudgetUsd?`--max-budget-usd ${Number(r.maxBudgetUsd)}`:''].filter(Boolean).join(' ');
+ const flags=[`--permission-mode ${r.permissionMode}`,r.model?`--model ${r.model}`:'',r.effort?`--effort ${r.effort}`:'',r.maxBudgetUsd?`--max-budget-usd ${Number(r.maxBudgetUsd)}`:''].filter(Boolean).join(' ');
  const nextFeat=order.find(f=>specStatus(f)!=='done')?.key||p.features[0]?.key||'F01',nextSprint=(()=>{const f=order.find(x=>specStatus(x)!=='done');return f?sprintCode(sprintOf(f,p),p):'S01';})(),firstOp=list.find(m=>m.slots.includes('op'));
  const claudeMd=[
   '# CLAUDE.md','',`Projeto **${opTitle}**, executado pela squad **${q.name}**. Exportado do SQUAD/CODE em ${today}.`,'',
@@ -12392,14 +12392,14 @@ function runOptionsFor(a,r=runtime(),p=project()){
 }
 /* Command preview: mirrors the argument order built by server.js (startRun). */
 function claudeArgs(o,systemFile){
- const args=[['-p'],['--output-format','stream-json'],['--verbose'],['--permission-prompts','none']];
+ const args=[['-p'],['--output-format','stream-json'],['--verbose']];
  if(systemFile)args.push(['--append-system-prompt-file',systemFile]);
  if(o.project)args.push(['--settings','squad.settings.json']);
  if(o.agents)args.push(['--agents','squad.agents.json']);
  if(o.mcpServers)args.push(['--mcp-config','squad.mcp.json'],['--strict-mcp-config']);
  if(o.forwardSubagents)args.push(['--forward-subagent-text']);
  if(o.model)args.push(['--model',o.model]);
- if(o.permissionMode)args.push(['--permission-mode',o.permissionMode]);
+ args.push(['--permission-mode',o.permissionMode||'dontAsk']);
  if(o.effort)args.push(['--effort',o.effort]);
  if(o.maxBudgetUsd)args.push(['--max-budget-usd',String(Number(o.maxBudgetUsd))]);
  if(o.tools)args.push(['--tools',o.tools.join(',')]);

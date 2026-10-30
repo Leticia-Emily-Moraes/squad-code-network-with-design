@@ -50,7 +50,7 @@ order**, into one classic `<script>`: `portraits.js`, `avatars.js`, `conventions
 
 **`server.js` (bridge) + `db.js` (SQLite).** Serves `index.html` (injecting a per-start random token), binds to
 127.0.0.1 only, and every `/api` call needs the token plus local Host/Origin. `/api/runs` spawns
-`claude -p --output-format stream-json --verbose --permission-prompts none`, writes the agent's system
+`claude -p --output-format stream-json --verbose --permission-mode <mode>` (`dontAsk` without one), writes the agent's system
 prompt to a temp file passed as `--append-system-prompt-file`, sends the step prompt via **stdin**
 (never shell-interpolated), and streams events back. Options (permission mode, effort, tools, model,
 dirs, budget, `partial` → `--include-partial-messages`) are whitelisted. Limits: body 2 MB, prompt 400k chars, system prompt 100k (silently

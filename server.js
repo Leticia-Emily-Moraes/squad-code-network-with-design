@@ -371,7 +371,7 @@ async function startRun(body) {
   if (opts.projectRun) await ensureProjectRepo(opts.cwd);
 
   const id = crypto.randomUUID();
-  const args = ['-p', '--output-format', 'stream-json', '--verbose', '--permission-prompts', 'none'];
+  const args = ['-p', '--output-format', 'stream-json', '--verbose'];
   let sysFile = null, settingsFile = null, agentsFile = null, mcpFile = null;
   // OS temp cleanup can remove the (usually empty) folder while the bridge keeps running.
   if (systemPrompt.trim() || opts.projectRun || opts.agents || opts.mcpServers) await fsp.mkdir(TMP_DIR, { recursive: true });
@@ -400,7 +400,8 @@ async function startRun(body) {
   }
   if (opts.forwardSubagents) args.push('--forward-subagent-text');
   if (opts.model) args.push('--model', opts.model);
-  if (opts.permissionMode) args.push('--permission-mode', opts.permissionMode);
+  // Headless has nobody to approve a prompt: without a mode from the page, dontAsk denies what would need one.
+  args.push('--permission-mode', opts.permissionMode || 'dontAsk');
   if (opts.effort) args.push('--effort', opts.effort);
   if (opts.maxBudgetUsd) args.push('--max-budget-usd', opts.maxBudgetUsd);
   if (opts.tools) args.push('--tools', opts.tools.length ? opts.tools.join(',') : '');

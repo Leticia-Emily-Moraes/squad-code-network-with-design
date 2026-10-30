@@ -24,7 +24,7 @@ Com o bridge conectado e o modo **Claude Code real** ativo, cada etapa da rota d
 - **Colegas**: os outros membros da squad vão para `--agents` (um arquivo temporário) com `--forward-subagent-text`, e as chamadas rodam em primeiro plano (`CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1`).
 - **Modelo**: o do agente, ou o modelo global das configurações. `inherit` usa o padrão do Claude Code.
 - **Ferramentas**: as marcadas no estúdio vão para `--tools` (restrição, desligável) e `--allowedTools`, somadas às regras extras (ex.: `Bash(npm test)`).
-- **Permissões**: modo global (padrão `acceptEdits`). Em modo headless ninguém aprova prompts (`--permission-prompts none`), então o que exigiria aprovação é negado e aparece no console.
+- **Permissões**: modo global (padrão `acceptEdits`). Em modo headless ninguém aprova prompts, então o que exigiria aprovação é negado e aparece no console.
 
 O resultado de cada agente vira o contexto de handoff do próximo. A última etapa envia a feature para **Revisão humana**; somente a aprovação a conclui e libera as dependentes. Pausar deixa a etapa em andamento terminar. Encerrar mata o processo (`taskkill /T` no Windows). Uma falha devolve a feature para Prontas.
 
