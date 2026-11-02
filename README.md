@@ -342,6 +342,11 @@ Use exatamente o nome `figma-remote`: o login é guardado por servidor, e a exec
 no estúdio do agente (aba Ferramentas > Servidores MCP), marque **Figma oficial (nuvem)** e, para criar e editar, **Permitir criar e editar
 designs**. Sem essa segunda caixa o agente só lê (`create_session`, `get_design_context`, `get_screenshot` e as demais de leitura).
 
+Os designers do catálogo (PRISM, CANVAS e MOSAIC) já vêm com as duas opções ligadas. Para o designer criar um draft por operação numa pasta sua,
+abra a pasta no Figma, copie o endereço (`https://www.figma.com/files/team/<id>/folder/<id>`) e cole no campo **Pasta do Figma para os
+designs novos** da operação; a operação seguinte já vem com o mesmo link. Sem o campo, o arquivo novo cai nos rascunhos da conta. O designer
+edita livremente o arquivo que criou, mas não mexe nos outros arquivos da conta.
+
 Para conferir o caminho completo (o mesmo que o bridge percorre, com uma chamada mínima ao modelo):
 
 ```sh

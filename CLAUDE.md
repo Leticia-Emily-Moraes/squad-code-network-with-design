@@ -267,8 +267,11 @@ every tool takes `fresh`).
   exports that carry the server; never chats or colleagues). A server with a `tools` list (`figma-remote`, the official one, logged in once with `claude mcp login figma-remote`) is allowed
   tool by tool: `tools.read` always, `tools.write` only when `a.mcpWrite` has its key (a studio switch, persisted in
   `normalizeWorkspace`), and anything the server adds later stays denied; `figmaGuides` gives it the official workflow and, with write
-  on, the rules (own files only, because the server cannot scope an agent to one file: `create_session` says so itself). A new server
-  is one `MCP_SERVERS` entry.
+  on, the rules (own files only, because the server cannot scope an agent to one file: `create_session` says so itself). The catalog designers
+  (PRISM, CANVAS, MOSAIC) also come with `figma-remote` and writing on (`catalogVersion` 4 migrates the ones still on `figma-api` alone).
+  `project.figmaFolder` (persisted, `figmaFolderLink`/`figmaFolderIds`: a figma.com/files/.../folder/<id> (or project/<id>) link, pre-filled from the
+  last operation that has one) tells a writing designer where to `create_new_file` (`projectId`, and `planKey` team::<id> when the link
+  has the team): one draft per operation. A new server is one `MCP_SERVERS` entry.
 - Agents: `ROLES` defines specialties; Squad Studio presets come from `AGENT_PRESETS` and
   `OP_CATEGORIES` (operators picked by category → sub-specialty, generalist first) and are
   materialized by `createPresetAgent`. Each agent has `model` (catalog `CLAUDE_MODELS`: aliases, pinned IDs, `inherit`;
