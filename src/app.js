@@ -386,7 +386,7 @@ const STORE='squad-code.network.v2';
 // catalogVersion: one-time catalog migrations already applied to this workspace (migrateCatalogAgents). New workspaces start current.
 // teamsChat: width of the Agent Teams chat panel in px (0 = default). opsChat: width of the docked operation chat (0 = default).
 // mapQuality: graphics of the hex city ('high': shadows, ambient occlusion and bloom; 'low': plain render).
-const DEFAULT_SETTINGS={motion:true,stepMs:1800,squadView:'city',cityShape:'flat',mapQuality:'high',catalogVersion:4,teamsChat:0,opsChat:0,runtime:{...DEFAULT_RUNTIME}};
+const DEFAULT_SETTINGS={motion:true,stepMs:1800,squadView:'city',cityShape:'flat',mapQuality:'high',catalogVersion:5,teamsChat:0,opsChat:0,runtime:{...DEFAULT_RUNTIME}};
 function normalizeRuntime(r={}){const str=(v,max)=>typeof v==='string'?v.slice(0,max).trim():'';const n=Number(r.timeoutSec),c=Number(r.concurrency),b=Number(r.maxBudgetUsd);return{mode:r.mode==='demo'?'demo':'claude',claudePath:str(r.claudePath,400),permissionMode:Object.hasOwn(PERMISSION_MODES,r.permissionMode)?r.permissionMode:'acceptEdits',model:/^[A-Za-z0-9._\-\[\]]{0,80}$/.test(r.model||'')?(r.model||''):'',effort:EFFORTS.includes(r.effort)?r.effort:'',maxBudgetUsd:Number.isFinite(b)&&b>0&&b<=1000?String(b):'',timeoutSec:Number.isFinite(n)&&n>=10&&n<=7200?Math.round(n):900,concurrency:Number.isInteger(c)&&c>=1&&c<=8?c:2,addDirs:str(r.addDirs,2000),restrictTools:r.restrictTools!==false,extraAllowedTools:str(r.extraAllowedTools,2000)};}
 const AGENT_STAGES={discovery:{label:'Descoberta',short:'IDEIA'},identity:{label:'Identidade',short:'IDENTIDADE'},prompt:{label:'Prompt & Tools',short:'PROMPT'},validation:{label:'Validação',short:'VALIDAÇÃO'},ready:{label:'Pronto',short:'PRONTO'}};
 const STAGE_ORDER=['discovery','identity','prompt','validation','ready'];
@@ -415,7 +415,7 @@ function sprintFeatures(s,p=project()){const first=p.sprints?.[0];return p.featu
 function sprintCode(s,p=project()){return'S'+pad(Math.max(0,(p?.sprints||[]).indexOf(s))+1);}
 function currentSprint(p=project()){const list=p?.sprints||[];return list.find(s=>sprintFeatures(s,p).some(f=>f.status!=='done'))||list.at(-1)||null;}
 function seedWorkspace(){
- const agents=['commander','po','architect','backend','frontend','qa'].map(role=>[role,ROLES[role]]).map(([role,r])=>({id:'agent-'+role,name:r.name,role,specialty:'',icon:'',description:r.description,prompt:r.prompt,model:r.model,effort:'',tools:['Read','Glob','Grep',...(['backend','frontend'].includes(role)?['Edit','Write']:[])],image:'',nextId:'',productionStage:'ready',hex:{...r.hex},linkId:'',...defaultSoul({name:r.name,role})}));
+ const agents=['commander','po','architect','backend','frontend','qa'].map(role=>[role,ROLES[role]]).map(([role,r])=>({id:'agent-'+role,name:r.name,role,specialty:'',icon:'',description:r.description,prompt:r.prompt,model:r.model,effort:'',tools:['Read','Glob','Grep',...(['backend','frontend'].includes(role)?['Edit','Write']:[]),'Bash'],image:'',nextId:'',productionStage:'ready',hex:{...r.hex},linkId:'',...defaultSoul({name:r.name,role})}));
  placeDesks(agents);
  const features=[
   createFeature('Autenticação e acesso',1,{priority:'P0',status:'done',description:'Cadastro, login, logout e recuperação de acesso.',criteria:'Validar entradas; restringir acesso administrativo; testar estados de sucesso e erro.',outputs:[{agentId:'agent-qa',at:nowISO(),text:'Registro de exemplo para demonstrar uma feature concluída. Não há código, testes ou execução real associados.',simulated:true}]}),
@@ -833,7 +833,7 @@ function openAgentEditor(agentId,opts={}){
  const existing=agentById(agentId);
  if(!existing&&state.agents.length>=80)return toast('Limite de 80 agentes por workspace.','error');
  const role=ROLES[opts.role]?opts.role:'backend',r=ROLES[role];
- const a=opts.draft?clone(opts.draft):existing?clone(existing):{id:id('agent'),name:codenameTaken(r.name)?'':r.name,role,specialty:'',icon:'',model:r.model,effort:'',description:r.description,prompt:r.prompt,tools:['Read','Glob','Grep','Edit','Write'],image:'',nextId:'',productionStage:'discovery',hex:validHex(opts.hex)?{q:opts.hex.q,r:opts.hex.r}:null,linkId:'',desk:validDesk(opts.desk)?opts.desk:'',...defaultSoul({name:codenameTaken(r.name)?'':r.name,role})};
+ const a=opts.draft?clone(opts.draft):existing?clone(existing):{id:id('agent'),name:codenameTaken(r.name)?'':r.name,role,specialty:'',icon:'',model:r.model,effort:'',description:r.description,prompt:r.prompt,tools:['Read','Glob','Grep','Edit','Write','Bash'],image:'',nextId:'',productionStage:'discovery',hex:validHex(opts.hex)?{q:opts.hex.q,r:opts.hex.r}:null,linkId:'',desk:validDesk(opts.desk)?opts.desk:'',...defaultSoul({name:codenameTaken(r.name)?'':r.name,role})};
  if(!a.conventions)a.conventions=defaultConventions(a);
  const tpl=existing?agentTemplateOf(a):null;
  // Created from a map double click: the agent joins that squad on save (squadJoinSlot picks the position).
@@ -2946,7 +2946,7 @@ function presetByName(n){
 }
 function agentTemplateOf(a){return presetByName(a?.template)||presetByName(a?.name);}
 function presetDefaults(p){
- const r=ROLES[p.role],d={name:p.name,role:p.role,specialty:p.specialty||'',icon:p.icon||'',model:p.model||r.model,effort:p.effort||'',description:p.description||r.description,prompt:presetPrompt(p),tools:['Read','Glob','Grep',...(['commander','architect','po','qa'].includes(p.role)?[]:['Edit','Write'])],mcp:(p.mcp||[]).filter(k=>Object.hasOwn(MCP_SERVERS,k)),mcpWrite:(p.mcpWrite||[]).filter(k=>Object.hasOwn(MCP_SERVERS,k)),image:'',template:p.name,...defaultSoul({name:p.name})};
+ const r=ROLES[p.role],d={name:p.name,role:p.role,specialty:p.specialty||'',icon:p.icon||'',model:p.model||r.model,effort:p.effort||'',description:p.description||r.description,prompt:presetPrompt(p),tools:['Read','Glob','Grep',...(['commander','architect','po','qa'].includes(p.role)?[]:['Edit','Write']),'Bash'],mcp:(p.mcp||[]).filter(k=>Object.hasOwn(MCP_SERVERS,k)),mcpWrite:(p.mcpWrite||[]).filter(k=>Object.hasOwn(MCP_SERVERS,k)),image:'',template:p.name,...defaultSoul({name:p.name})};
  d.conventions=defaultConventions(d,p.conv);return d;
 }
 // "Restaurar default": refills the studio form with the template values; saving applies them, cancelling discards them.
@@ -3000,6 +3000,13 @@ function migrateCatalogAgents(ws){
    if(Array.isArray(a.mcp)&&a.mcp.length===1&&a.mcp[0]==='figma-api'&&!(a.mcpWrite||[]).length){a.mcp=[...t.mcp];a.mcpWrite=[...t.mcpWrite];changed=true;}
   }
   ws.settings.catalogVersion=4;changed=true;
+ }
+ if((ws.settings.catalogVersion||1)<5){
+  // Every agent gets Bash, so they can run git and the project's lint/typecheck/tests. Only adds it, never removes a choice.
+  for(const a of ws.agents){
+   if(Array.isArray(a.tools)&&!a.tools.includes('Bash')){a.tools.push('Bash');changed=true;}
+  }
+  ws.settings.catalogVersion=5;changed=true;
  }
  return changed;
 }
