@@ -10731,7 +10731,7 @@ const STORE='squad-code.network.v2';
 // catalogVersion: one-time catalog migrations already applied to this workspace (migrateCatalogAgents). New workspaces start current.
 // teamsChat: width of the Agent Teams chat panel in px (0 = default). opsChat: width of the docked operation chat (0 = default).
 // mapQuality: graphics of the hex city ('high': shadows, ambient occlusion and bloom; 'low': plain render).
-const DEFAULT_SETTINGS={motion:true,stepMs:1800,squadView:'city',cityShape:'flat',mapQuality:'high',catalogVersion:4,teamsChat:0,opsChat:0,runtime:{...DEFAULT_RUNTIME}};
+const DEFAULT_SETTINGS={motion:true,stepMs:1800,squadView:'city',cityShape:'flat',mapQuality:'high',catalogVersion:5,teamsChat:0,opsChat:0,runtime:{...DEFAULT_RUNTIME}};
 function normalizeRuntime(r={}){const str=(v,max)=>typeof v==='string'?v.slice(0,max).trim():'';const n=Number(r.timeoutSec),c=Number(r.concurrency),b=Number(r.maxBudgetUsd);return{mode:r.mode==='demo'?'demo':'claude',claudePath:str(r.claudePath,400),permissionMode:Object.hasOwn(PERMISSION_MODES,r.permissionMode)?r.permissionMode:'acceptEdits',model:/^[A-Za-z0-9._\-\[\]]{0,80}$/.test(r.model||'')?(r.model||''):'',effort:EFFORTS.includes(r.effort)?r.effort:'',maxBudgetUsd:Number.isFinite(b)&&b>0&&b<=1000?String(b):'',timeoutSec:Number.isFinite(n)&&n>=10&&n<=7200?Math.round(n):900,concurrency:Number.isInteger(c)&&c>=1&&c<=8?c:2,addDirs:str(r.addDirs,2000),restrictTools:r.restrictTools!==false,extraAllowedTools:str(r.extraAllowedTools,2000)};}
 const AGENT_STAGES={discovery:{label:'Descoberta',short:'IDEIA'},identity:{label:'Identidade',short:'IDENTIDADE'},prompt:{label:'Prompt & Tools',short:'PROMPT'},validation:{label:'Validação',short:'VALIDAÇÃO'},ready:{label:'Pronto',short:'PRONTO'}};
 const STAGE_ORDER=['discovery','identity','prompt','validation','ready'];
@@ -10760,7 +10760,7 @@ function sprintFeatures(s,p=project()){const first=p.sprints?.[0];return p.featu
 function sprintCode(s,p=project()){return'S'+pad(Math.max(0,(p?.sprints||[]).indexOf(s))+1);}
 function currentSprint(p=project()){const list=p?.sprints||[];return list.find(s=>sprintFeatures(s,p).some(f=>f.status!=='done'))||list.at(-1)||null;}
 function seedWorkspace(){
- const agents=['commander','po','architect','backend','frontend','qa'].map(role=>[role,ROLES[role]]).map(([role,r])=>({id:'agent-'+role,name:r.name,role,specialty:'',icon:'',description:r.description,prompt:r.prompt,model:r.model,effort:'',tools:['Read','Glob','Grep',...(['backend','frontend'].includes(role)?['Edit','Write']:[])],image:'',nextId:'',productionStage:'ready',hex:{...r.hex},linkId:'',...defaultSoul({name:r.name,role})}));
+ const agents=['commander','po','architect','backend','frontend','qa'].map(role=>[role,ROLES[role]]).map(([role,r])=>({id:'agent-'+role,name:r.name,role,specialty:'',icon:'',description:r.description,prompt:r.prompt,model:r.model,effort:'',tools:['Read','Glob','Grep',...(['backend','frontend'].includes(role)?['Edit','Write']:[]),'Bash'],image:'',nextId:'',productionStage:'ready',hex:{...r.hex},linkId:'',...defaultSoul({name:r.name,role})}));
  placeDesks(agents);
  const features=[
   createFeature('Autenticação e acesso',1,{priority:'P0',status:'done',description:'Cadastro, login, logout e recuperação de acesso.',criteria:'Validar entradas; restringir acesso administrativo; testar estados de sucesso e erro.',outputs:[{agentId:'agent-qa',at:nowISO(),text:'Registro de exemplo para demonstrar uma feature concluída. Não há código, testes ou execução real associados.',simulated:true}]}),
@@ -11178,7 +11178,7 @@ function openAgentEditor(agentId,opts={}){
  const existing=agentById(agentId);
  if(!existing&&state.agents.length>=80)return toast('Limite de 80 agentes por workspace.','error');
  const role=ROLES[opts.role]?opts.role:'backend',r=ROLES[role];
- const a=opts.draft?clone(opts.draft):existing?clone(existing):{id:id('agent'),name:codenameTaken(r.name)?'':r.name,role,specialty:'',icon:'',model:r.model,effort:'',description:r.description,prompt:r.prompt,tools:['Read','Glob','Grep','Edit','Write'],image:'',nextId:'',productionStage:'discovery',hex:validHex(opts.hex)?{q:opts.hex.q,r:opts.hex.r}:null,linkId:'',desk:validDesk(opts.desk)?opts.desk:'',...defaultSoul({name:codenameTaken(r.name)?'':r.name,role})};
+ const a=opts.draft?clone(opts.draft):existing?clone(existing):{id:id('agent'),name:codenameTaken(r.name)?'':r.name,role,specialty:'',icon:'',model:r.model,effort:'',description:r.description,prompt:r.prompt,tools:['Read','Glob','Grep','Edit','Write','Bash'],image:'',nextId:'',productionStage:'discovery',hex:validHex(opts.hex)?{q:opts.hex.q,r:opts.hex.r}:null,linkId:'',desk:validDesk(opts.desk)?opts.desk:'',...defaultSoul({name:codenameTaken(r.name)?'':r.name,role})};
  if(!a.conventions)a.conventions=defaultConventions(a);
  const tpl=existing?agentTemplateOf(a):null;
  // Created from a map double click: the agent joins that squad on save (squadJoinSlot picks the position).
@@ -11734,9 +11734,9 @@ function feSendState(){const i=$('#feChatInput'),b=$('.fe-send');if(i&&b)b.disab
 function coWritePrompt(a,msgs){
  const p=project(),f=ui.opsFeatureDraft?.feature,val=id=>(document.getElementById(id)?.value||'').trim(),clip=(t,n)=>t.length>n?t.slice(0,n)+' […]':t,c=ui.featureChat,fresh=new Set(msgs.map(m=>m.id));
  const deps=[...document.querySelectorAll('#featureForm [name=dependencies]:checked')].map(x=>featureById(x.value)?.key).filter(Boolean);
- const others=p.features.filter(x=>x.id!==f?.id).map(x=>`- ${x.key}: ${x.title} (${SCOPES[x.scope]||x.scope}, ${x.priority})`).join('\n');
+ const others=p.features.some(x=>x.id!==f?.id)?projectPanorama(p,{skip:f?.id}):'';
  const history=[`${a.name}: ${c.greeting||feGreeting(a)}`,...c.messages.filter(m=>!fresh.has(m.id)&&m.role!=='system').slice(-12).map(m=>`${m.role==='user'?'Pessoa':a.name}: ${m.text}`)].join('\n\n');
- return[`# Co-escrita da feature ${f?.key||''} · ${p.code} ${p.name}`,`## Projeto\n${clip(p.briefing||'(sem briefing)',3000)}`,p.scopeIn?.trim()?`Dentro do escopo:\n${clip(p.scopeIn,1500)}`:'',p.scopeOut?.trim()?`Fora do escopo:\n${clip(p.scopeOut,1500)}`:'',others?`## Outras features do projeto\n${others}`:'',
+ return[`# Co-escrita da feature ${f?.key||''} · ${p.code} ${p.name}`,`## Projeto\n${clip(p.briefing||'(sem briefing)',3000)}`,p.scopeIn?.trim()?`Dentro do escopo:\n${clip(p.scopeIn,1500)}`:'',p.scopeOut?.trim()?`Fora do escopo:\n${clip(p.scopeOut,1500)}`:'',others?`## Panorama do projeto (todas as sprints e features)\n${others}`:'',
   `## Formulário agora (a pessoa pode ter editado)\nTítulo: ${val('featureTitle')||'(vazio)'}\nÁrea: ${SCOPES[val('featureScope')]||''} · Prioridade: ${val('featurePriority')}${deps.length?` · Depende de: ${deps.join(', ')}`:''}\n\n### Escopo\n${val('featureDescription')||'(vazio)'}\n\n### Critérios de aceitação\n${val('featureCriteria')||'(vazio)'}\n\n### Tarefas\n${val('featureTasks')||'(vazio)'}`,
   history?`## Conversa até aqui\n${history}`:'',`## ${msgs.length>1?'Novas mensagens':'Nova mensagem'} da pessoa\n${msgs.map(m=>m.text).join('\n\n')}`].filter(Boolean).join('\n\n');
 }
@@ -11809,7 +11809,7 @@ async function runCoWrite(msgs){
     if(exit.isError){if(lm)chatSettle(lm,{});chatPush(exit.status==='cancelled'?{role:'system',text:'Resposta interrompida.'}:{role:'system',text:`Não consegui responder: ${exit.error||'falha na execução do Claude Code.'}`,error:true,retry:msgs.map(x=>x.id)});break;}
     const out={},m=await (doc?applyDocWrite:applyCoWrite)(exit.result||'',exit.costUsd,{secs,m:lm,agent:c.group?a:null,out});
     if(!mine())return;
-    round.push({agent:a,mid:m?.id,text:m?.text||'',updated:m?.updated||[]});
+    round.push({agent:a,mid:m?.id,text:m?.text||'',updated:m?.updated||[],to:out.next?.id||'',brief:out.brief||''});
     // A guest leaves once it delivered (it waits when it asked the person something); a host can call guests, who speak next.
     const guest=c.guests?.get(a.id);
     if(guest){if(m?.options?.some(o=>o.id==='ask'))guest.waiting=true;else{await feWait(700);if(!mine())return;teamsGuestOut(c,a.id);}}
@@ -11923,6 +11923,7 @@ function docCoWriteSystem(def,a,c,turn){
  const head=group.length?['# Agent Teams: reunião de kickoff (SQUAD/CODE)',`Você está numa reunião online com a pessoa e com ${names(mates)}, da sua squad, para co-escrever os primeiros documentos de uma operação. A conversa é consultiva: vocês entendem o que a pessoa quer, propõem caminhos e escrevem juntos. Não execute nada, não use ferramentas e não escreva código.`,role?`- ${role}`:'',
   `- Na reunião, ${mates.map(parts).filter(Boolean).join('; ')}.`,
   fam==='commander'?'- Você conduz: siga a pauta pelo que ainda falta (veja "## Pauta"), faça uma ou duas perguntas por vez, resuma o que ficou decidido e escreva o briefing assim que ele estiver claro. Quando o assunto for de um colega, passe a palavra a ele com "next" em vez de responder ou escrever no lugar dele.':'- O comandante conduz a reunião. Responda à sua parte, escreva os seus campos e, se precisar de uma decisão, pergunte à pessoa. A próxima mensagem da pessoa volta sozinha para o comandante: não devolva a palavra só por devolver.',
+  fam==='commander'&&hosts.some(x=>chatFamily(x)==='prd')?'- Sprints e features não são suas para escrever: quando a pessoa pedir para criar, ajustar, fatiar ou ligar por dependência sprints e features, passe a palavra ao PRD com "next" (cite-o com @) e mande junto "brief", um pedido fechado e específico: quais sprints e features criar ou mudar (códigos F0X ou títulos exatos), o corte desejado, os critérios de aceitação esperados, as dependências entre elas e o que não pode mudar. O PRD executa exatamente isso pelo bloco "plan". Não repita no texto o conteúdo do brief.':'',
   prev.length?`- ${names(prev)} já falou nesta rodada (veja "## Nesta rodada"): não repita o que foi dito, complemente com a sua parte.`:'',
   '- Fale com a pessoa, como numa chamada, sem conversar só entre vocês. Cite os colegas sempre com @CODINOME (ex.: @'+(mates[0]?.name||'ECHO')+'), como no Teams. Para passar a palavra, escreva @CODINOME no texto e mande "next".',
   '- A pessoa direciona perguntas com @: quando ela marcar você, responda direto a ela.',
@@ -11930,7 +11931,8 @@ function docCoWriteSystem(def,a,c,turn){
   :['# Modo co-escrita de documento do projeto (SQUAD/CODE)',`Você está co-escrevendo com a pessoa os documentos de uma operação, dentro do SQUAD/CODE. Não execute nada, não use ferramentas e não escreva código.`];
  return[...head,`- Responda em português do Brasil, com mensagens curtas de chat (até ${group.length?4:5} frases), no jeito da sua SOUL. Se faltar informação importante, faça no máximo 2 perguntas.`,'- A mensagem é conversa: texto corrido, sem travessões, sem listas e sem negrito. Markdown, listas e subtítulos ficam só dentro dos campos do JSON, sempre sem emojis.','- Se houver o que atualizar, uma pergunta com opções ou um colega para chamar, termine com UM bloco ```json contendo só as chaves necessárias:','  - "ask": {"question": "pergunta curta", "options": ["opção 1", "opção 2"]} para perguntar com 2 a 4 opções curtas de escolha única. As opções viram botões e a pessoa também pode responder escrevendo. Use quando uma escolha ajudar a decidir; a pergunta vai só aí, não a repita no texto;',...fields.map(f=>keys[f.field]),
   adrs?`  - "adrs": lista só com os ADRs que você registra ou revisa, cada um {"ref": "ADR-002", "title": "título curto da decisão", "status": "Proposto", "content": "## Contexto\\n...\\n\\n## Decisão\\n...\\n\\n## Consequências\\n..."}. Use "ref" apenas para revisar um ADR que já existe (mande o ADR inteiro); sem "ref" o ADR é novo. Status: ${ADR_STATUS.join(', ')}.`:'',
-  mates.length?`  - "next": o codinome de um colega (${names(mates)}) para falar logo depois de você, quando a parte dele for necessária agora; cite-o com @ no texto. No máximo um.`:'',
+  kickoffPlanOwner(a)&&def.adrs&&!ui.opsNew?'  - "plan": mudanças nas sprints e nas features do projeto, só quando a conversa pedir: {"sprints": [{"ref": "Sprint 01", "name": "novo nome", "goal": "objetivo", "position": 2, "remove": false}], "features": [{"ref": "F03", "title": "título", "description": "escopo", "criteria": "um critério por linha", "tasks": "uma tarefa por linha", "scope": "fullstack, backend, frontend, architect, po ou qa", "priority": "P0, P1 ou P2", "sprint": "Sprint 02", "dependencies": ["F01", "título exato de outra feature nova deste plano"]}]}. As dependências aceitam o código de uma feature ou o título exato de uma feature nova do mesmo plano; mande a lista inteira (vazia remove as dependências); você pode mudar as dependências de qualquer feature que ainda não começou. Leia as features do projeto antes: para mudar uma que já existe mande o "ref" dela com só os campos que mudam; sem "ref" a feature é nova. Nunca duplique o escopo de outra feature. Em sprints, "position" muda a ordem (1 é a primeira) e "remove": true exclui uma sprint que ficou vazia (mova as features antes, no mesmo plano). Em features em execução, em revisão, concluídas e no setup só o texto muda (título, descrição, critérios e tarefas); sprint, área, prioridade e dependências delas ficam como estão. Registrar sprints e features é com você, pelo bloco "plan": não diga que não grava nada. Diga que deixou a proposta pronta e que ela entra no projeto quando a pessoa clicar em Salvar no projeto.':'',
+  mates.length?`  - "next": o codinome de um colega (${names(mates)}) para falar logo depois de você, quando a parte dele for necessária agora; cite-o com @ no texto. No máximo um. Com "next" você pode mandar "brief": o pedido específico para esse colega, que ele recebe como instrução no prompt dele.`:'',
   pool.length?'  - "invite": [{"agent": "CODINOME", "reason": "o que ele precisa resolver"}] para chamar colegas da squad que não estão na reunião (no máximo dois); cite-os com @ no texto. Eles falam logo depois de você;':'',
   rest.length||(def.adrs&&!adrs)?`- ${teamsNames([...rest.map(label),...(def.adrs&&!adrs?['os ADRs']:[])])} são dos colegas: não mande essas chaves; se precisar deles agora, use "next".`:'',
   '- Nas listas, escreva só o texto de cada item, sem marcadores.','- Parta do conteúdo atual dos documentos: preserve o que a pessoa escreveu e mude só o necessário. Cada valor do JSON substitui o campo inteiro.','- Use o briefing, as features e os outros documentos do projeto como contexto, sem contradizê-los.',`- Siga as suas diretrizes de ${fam==='adr'?'ADR e arquitetura':fam==='commander'?'comando':'PRD'}.`].filter(Boolean).join('\n');
@@ -11943,7 +11945,7 @@ function docCoWritePrompt(a,c,msgs,turn){
  // This round's replies go in their own section below, after the person's new messages.
  const round=turn?.round||[],skip=new Set([...msgs.map(m=>m.id),...round.map(r=>r.mid).filter(Boolean)]),who=m=>m.role==='user'?'Pessoa':agentById(m.agentId)?.name||a.name;
  const team=(q?.agentIds||[]).map(agentById).filter(Boolean).map(x=>`- ${x.name}: ${roleLabel(x)}${x.id===a.id?' (você)':c.group?.includes(x.id)?' (na reunião)':''}`).join('\n');
- const feats=ui.opsNew?fv('features').split('\n').map(t=>t.trim()).filter(Boolean).map(t=>`- ${t}`).join('\n'):cur.sprints.map(s=>{const fs=sprintFeatures(s,cur);return fs.length?`### ${s.name}${s.goal?`: ${s.goal}`:''}\n${fs.map(f=>`- ${f.key}: ${f.title} (${SCOPES[f.scope]||f.scope}, ${f.priority})`).join('\n')}`:'';}).filter(Boolean).join('\n');
+ const feats=ui.opsNew?fv('features').split('\n').map(t=>t.trim()).filter(Boolean).map(t=>`- ${t}`).join('\n'):projectPanorama(cur);
  const guests=[...(c.guests||[])].map(([id,g])=>`- ${agentById(id)?.name||id}: chamado por ${g.by}${g.reason?`, para: ${g.reason}`:''}`).join('\n'),called=c.guests?.get(a.id);
  const adrs=def.adrs?adrValues($('#docAdrList')).map((x,i)=>`#### ${num(i)}: ${x.title.trim()||'(sem título)'} (${x.status})\n${acClip(x.content,1200)||'(sem conteúdo)'}`).join('\n\n'):'';
  const now=def.fields.map(f=>`### ${FE_FIELD_LABEL[f.field]}\n${mv(f.id)||'(vazio)'}`).join('\n\n')+(def.adrs?`\n\n### ADRs\n${adrs||'(nenhum registrado)'}`:'');
@@ -11951,9 +11953,9 @@ function docCoWritePrompt(a,c,msgs,turn){
  const hellos=(c.group||[c.agentId]).map(id=>[agentById(id)?.name||a.name,chatGreeting(c,agentById(id))]).filter(([,t])=>t).map(([n,t])=>`${n}: ${t}`);
  const history=[...hellos,...c.messages.filter(m=>!skip.has(m.id)&&m.role!=='system').slice(-14).map(m=>`${who(m)}: ${m.text}`)].join('\n\n');
  const tagged=c.group?teamsMentions(c,msgs.map(m=>m.text).join('\n')):[];
- const said=round.map(r=>`${r.agent.name}: ${r.text}${r.updated.length?`\n(atualizou: ${r.updated.map(k=>FE_FIELD_LABEL[k]).join(', ')})`:''}`).join('\n\n');
+ const said=round.map(r=>`${r.agent.name}: ${r.text}${r.updated.length?`\n(atualizou: ${r.updated.map(k=>FE_FIELD_LABEL[k]).join(', ')})`:''}`).join('\n\n'),asked=round.filter(r=>r.brief&&r.to===a.id).map(r=>`${r.agent.name} pediu:\n${r.brief}`).join('\n\n');
  return[`# Agent Teams · kickoff de ${cur.code} ${fv('name')||cur.name||'Nova operação'}`,team?`## Squad ${q.name}\n${team}`:'',guests?`## Convidados na reunião\n${guests}`:'',called?`## Por que você está aqui\n${called.by==='Você'?'A pessoa':called.by} chamou você para: ${called.reason||'contribuir com a sua especialidade'}. Responda essa demanda; depois você sai da chamada.`:'',feats?`## Features\n${feats}`:'',`## Pauta\n${agenda}`,
-  `## Documentos agora (a pessoa pode ter editado)\n${now}`,`## Conversa até aqui\n${history}`,`## ${msgs.length>1?'Novas mensagens':'Nova mensagem'} da pessoa${tagged.length?` (marcou ${tagged.map(x=>'@'+x.name).join(', ')})`:''}\n${msgs.map(m=>m.text).join('\n\n')}`,said?`## Nesta rodada\n${said}\n\nAgora é a sua vez, ${a.name}.`:''].filter(Boolean).join('\n\n');
+  `## Documentos agora (a pessoa pode ter editado)\n${now}`,`## Conversa até aqui\n${history}`,`## ${msgs.length>1?'Novas mensagens':'Nova mensagem'} da pessoa${tagged.length?` (marcou ${tagged.map(x=>'@'+x.name).join(', ')})`:''}\n${msgs.map(m=>m.text).join('\n\n')}`,asked?`## Pedido para você (execute exatamente isto)\n${asked}`:'',said?`## Nesta rodada\n${said}\n\nAgora é a sua vez, ${a.name}.`:''].filter(Boolean).join('\n\n');
 }
 /* Meetup screen: top bar (clock, agenda, tabs, save, leave), stage (agent tiles in a gallery or a shared screen while an agent writes)
    and the side panel (chat and Documentos). The tiles follow the chat state (c.speakerId + c.phase: thinking, speaking, sharing). */
@@ -11986,7 +11988,7 @@ function teamsTileHTML(a,i,guest=false){return`<figure class="at-tile${guest?' g
 function teamsTilesCount(){const box=$('#atRoot .at-tiles');if(!box)return;const n=box.querySelectorAll('.at-tile:not(.leaving)').length;box.dataset.n=n;box.style.setProperty('--n',n);}
 function teamsAddTile(a){const box=$('#atRoot .at-tiles');if(!box||box.querySelector(`[data-agent="${CSS.escape(a.id)}"]`))return;box.querySelector('.at-tile.you')?.insertAdjacentHTML('beforebegin',teamsTileHTML(a,0,true));teamsTilesCount();}
 function teamsRemoveTile(id){const el=$(`#atRoot .at-tile[data-agent="${CSS.escape(id)}"]`);if(!el)return;el.classList.add('leaving');teamsTilesCount();setTimeout(()=>{el.remove();teamsTilesCount();},feReduced()?0:450);}
-function teamsSnapshot(){return JSON.stringify([PROJECT_DOCS.kickoff.fields.map(f=>teamsValue(f.field)),adrValues($('#docAdrList'))]);}
+function teamsSnapshot(){return JSON.stringify([PROJECT_DOCS.kickoff.fields.map(f=>teamsValue(f.field)),adrValues($('#docAdrList')),ui.docChat?.plan||null]);}
 function teamsDirty(){const c=ui.docChat;return!!c&&ui.modal==='teams'&&c.snapshot!==teamsSnapshot();}
 function teamsTick(){const el=$('#atClock'),c=ui.docChat;if(!el||!c){clearInterval(ui.teamsTimer);return;}const s=Math.floor((performance.now()-(ui.teamsT0||0))/1000),h=Math.floor(s/3600),p=n=>String(n).padStart(2,'0');el.textContent=`${h?h+':':''}${p(Math.floor(s/60)%60)}:${p(s%60)}`;}
 function teamsStop(){clearInterval(ui.teamsTimer);ui.teamsTimer=null;}
@@ -12065,24 +12067,80 @@ function teamsSplitDrag(event){
 }
 function teamsSplitKey(event){const [lo,hi]=teamsSideLimits(),cur=$('#atSide')?.getBoundingClientRect().width||384,px={ArrowLeft:cur+24,ArrowRight:cur-24,Home:lo,End:hi}[event.key];if(px==null)return;event.preventDefault();teamsSideSet(px,true);}
 // Agent reply: list fields become one item per line; ADRs with "ref" revise that block, the others are appended.
+/* Kickoff plan changes: the commander and the PRD may propose sprints and features during the meeting ("plan" in the reply's json). They wait in c.plan
+   and are written to the project by "Salvar no projeto" (applyKickoffPlan), never while the operation is still being created. */
+function kickoffPlanOwner(a){const fam=chatFamily(a);return fam==='prd'||(fam==='commander'&&!(ui.docChat?.group||[]).some(id=>chatFamily(agentById(id))==='prd'));}
+function normKey(t){return String(t||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,' ').trim();}
+function parseKickoffPlan(raw){
+ if(!raw||typeof raw!=='object')return null;const s=(v,n)=>String(Array.isArray(v)?v.join('\n'):v??'').trim().slice(0,n);
+ const sprints=(Array.isArray(raw.sprints)?raw.sprints:[]).filter(x=>x&&typeof x==='object'&&s(x.name||x.ref,60)).slice(0,10).map(x=>({ref:s(x.ref,60),name:s(x.name,60),goal:s(x.goal,2000),remove:x.remove===true,position:Number.isInteger(x.position)&&x.position>0?x.position:0}));
+ const features=(Array.isArray(raw.features)?raw.features:[]).filter(x=>x&&typeof x==='object'&&s(x.ref||x.title,120)).slice(0,20).map(x=>({ref:s(x.ref,20),title:s(x.title,120),description:s(x.description,8000),criteria:s(x.criteria,8000),tasks:s(x.tasks,8000),scope:Object.hasOwn(SCOPES,x.scope)&&x.scope!=='setup'?x.scope:'',priority:PRIORITIES.some(([k])=>k===x.priority)?x.priority:'',sprint:s(x.sprint,60),depsSet:Array.isArray(x.dependencies),dependencies:(Array.isArray(x.dependencies)?x.dependencies:[]).map(d=>s(d,120)).filter(Boolean).slice(0,20)}));
+ return sprints.length||features.length?{sprints,features}:null;
+}
+function kickoffPlanMerge(c,ops){
+ const cur=c.plan||(c.plan={sprints:[],features:[]}),merge=(list,add,key)=>{for(const o of add){const k=key(o),i=list.findIndex(x=>key(x)===k);if(i<0)list.push(o);else for(const [f,v] of Object.entries(o))if(v&&!(Array.isArray(v)&&!v.length))list[i][f]=v;}};
+ merge(cur.sprints,ops.sprints,o=>normKey(o.ref||o.name));merge(cur.features,ops.features,o=>o.ref?o.ref.toUpperCase():normKey(o.title));
+}
+function kickoffPlanText(ops){
+ const l=[...ops.sprints.map(s=>`sprint ${s.name||s.ref}`),...ops.features.map(f=>f.ref?`${f.ref}${f.title?` (${f.title})`:''}`:`nova: ${f.title}`)];
+ return`Proposta para o plano: ${l.join('; ')}. Só vale quando você clicar em Salvar no projeto.`;
+}
+// Writes the pending plan into the project: an edit goes to the feature named by "ref" (or with the same title, so nothing is duplicated); running, review, done and setup features stay as they are.
+function applyKickoffPlan(plan){
+ const p=project();if(!plan||!p||!guardMutation())return null;const out={sprints:0,created:0,edited:0,skipped:[]};
+ const findSprint=ref=>{const k=normKey(ref);return k?p.sprints.find(s=>s.id===ref||normKey(s.name)===k||normKey(sprintCode(s,p))===k)||null:null;};
+ for(const o of plan.sprints){const s=findSprint(o.ref)||findSprint(o.name);
+  if(o.remove)continue;
+  if(s){const n=o.name||s.name,g=o.goal||s.goal;if(n!==s.name||g!==s.goal){Object.assign(s,{name:n,goal:g});out.sprints++;}}
+  else if(o.name&&p.sprints.length<50){const n=createSprint(p.sprints.length+1,{name:o.name,goal:o.goal});p.sprints.push(n);setSprintOpen(n.id,true);out.sprints++;}}
+ const byKey=k=>p.features.find(f=>f.key.toUpperCase()===String(k).toUpperCase()),pending=[];
+ for(const o of plan.features){
+  let f=o.ref?byKey(o.ref):null;if(!f&&o.title){const k=normKey(o.title);f=p.features.find(x=>normKey(x.title)===k)||null;}
+  const sp=o.sprint?findSprint(o.sprint):null;
+  if(f){
+   // Started features (running, review, done) and the setup only take text changes; their sprint, area, priority and dependencies stay.
+   const locked=f.setup||['running','review','done'].includes(f.status);
+   const next={title:f.setup?f.title:o.title||f.title,description:o.description||f.description,criteria:o.criteria||f.criteria,tasks:o.tasks||f.tasks,...(locked?{}:{scope:o.scope||f.scope,priority:o.priority||f.priority,sprintId:sp?.id||f.sprintId})};
+   if(locked&&((o.scope&&o.scope!==f.scope)||(o.priority&&o.priority!==f.priority)||(sp&&sp.id!==f.sprintId)||o.depsSet))out.skipped.push(`${f.key} (estrutura travada)`);
+   const changed=Object.keys(next).some(k=>next[k]!==f[k]),rescope=!locked&&next.scope!==f.scope;
+   Object.assign(f,next);if(rescope)Object.assign(f,{route:[],briefs:[],status:'backlog',currentAgentId:null,step:0});
+   if(changed)out.edited++;if(!locked)pending.push([f,o]);
+  }else if(o.title&&p.features.length<150){
+   const maxKey=Math.max(0,...p.features.map(x=>parseInt(x.key.replace(/\D/g,''),10)||0));
+   f=createFeature(o.title,maxKey+1,{description:o.description,criteria:o.criteria||'Critérios de aceitação definidos no briefing.',tasks:o.tasks,scope:o.scope||'fullstack',priority:o.priority||'P1',sprintId:(sp||currentSprint(p))?.id||'',dependencies:setupOf(p)?[setupOf(p).id]:[]});
+   p.features.push(f);pending.push([f,Object.assign(o,{isNew:true})]);out.created++;
+  }
+ }
+ const dep=k=>byKey(k)||p.features.find(x=>normKey(x.title)===normKey(k));
+ for(const [f,o] of pending){if(!o.depsSet)continue;const ids=[...new Set(o.dependencies.map(k=>dep(k)?.id).filter(i=>i&&i!==f.id))];if(hasCycle(p.features.map(x=>x.id===f.id?{...x,dependencies:ids}:x))){out.skipped.push(`${f.key} (dependências)`);continue;}const had=new Set(f.dependencies||[]);if(!o.isNew&&(ids.some(i=>!had.has(i))||[...had].some(i=>!ids.includes(i)&&!featureById(i)?.setup)))out.edited++;f.dependencies=ids;}
+ for(const o of plan.sprints){const s=findSprint(o.ref)||findSprint(o.name);if(!s)continue;
+  if(o.remove){if(p.sprints.length<=1||sprintFeatures(s,p).length){out.skipped.push(`${s.name} (sprint única ou com features)`);continue;}p.sprints=p.sprints.filter(x=>x.id!==s.id);delete ui.sprintOpen[s.id];out.sprints++;continue;}
+  if(o.position){const i=p.sprints.indexOf(s),to=Math.min(o.position,p.sprints.length)-1;if(i!==to){p.sprints.splice(i,1);p.sprints.splice(to,0,s);out.sprints++;}}}
+ ensureSetup(p);
+ if(out.sprints||out.created||out.edited){log(`Kickoff: ${out.created} features novas, ${out.edited} editadas, ${out.sprints} sprints.`,'plan');save();render();}
+ return out;
+}
 async function applyDocWrite(result,cost,meta={}){
  const c=ui.docChat,def=PROJECT_DOCS[c?.doc];if(!c||!def)return null;const {reply,data}=parseCoWrite(result),changes=[];
  const item=x=>x&&typeof x==='object'?[x.term??x.termo??x.title??x.name,x.definition??x.definicao??x.description].filter(Boolean).join(': '):String(x??'');
  const lines=v=>(Array.isArray(v)?v.map(item):String(v??'').split('\n')).map(x=>x.trim().replace(/^(?:[-*•]|\d+[.)])\s+/,'')).filter(Boolean).join('\n');
  // A meetup guest only talks (and may ask): the documents keep their owners, and it neither passes the word nor calls others.
  const guest=!!(meta.agent&&c.guests?.has(meta.agent.id));
+ const planBy=meta.agent||agentById(c.agentId),plan=data&&typeof data==='object'&&!guest&&def.adrs&&!ui.opsNew&&planBy&&kickoffPlanOwner(planBy)?parseKickoffPlan(data.plan):null;
  if(data&&typeof data==='object'&&!guest){
   for(const f of def.fields){if(!(f.field in data))continue;const raw=data[f.field],v=f.list?lines(raw):typeof raw==='string'?raw.trim():null,el=document.getElementById(f.id);if(v===null||!el||el.value.trim()===v)continue;changes.push({field:f.field,value:v.slice(0,f.max||8000)});}
   if(def.adrs&&Array.isArray(data.adrs)){const v=data.adrs.filter(x=>x&&typeof x==='object'&&String(x.title||x.ref||'').trim()).slice(0,50).map(x=>({ref:String(x.ref||'').trim(),title:String(x.title||'').trim().slice(0,120),status:ADR_STATUS.includes(x.status)?x.status:'',content:String(x.content||'').trim().slice(0,12000)}));if(v.length)changes.push({field:'adrs',value:v});}
  }
  // Meetup: "next" passes the word to a colleague of the meeting, who speaks right after in this round (runCoWrite).
- if(meta.out&&c.group&&!guest&&data&&typeof data==='object'&&data.next){const n=String(Array.isArray(data.next)?data.next[0]:data.next).trim().replace(/^@/,'').toUpperCase(),x=c.group.map(agentById).find(g=>g&&g.name.toUpperCase()===n&&g.id!==meta.agent?.id);if(x)meta.out.next=x;}
+ if(meta.out&&c.group&&!guest&&data&&typeof data==='object'&&data.next){const n=String(Array.isArray(data.next)?data.next[0]:data.next).trim().replace(/^@/,'').toUpperCase(),x=c.group.map(agentById).find(g=>g&&g.name.toUpperCase()===n&&g.id!==meta.agent?.id);if(x){meta.out.next=x;const b=String(data.brief??data.pedido??'').trim().slice(0,3000);if(b)meta.out.brief=b;}}
  // "invite" calls squad members outside the meeting (at most 2 per reply), each with what it has to solve.
  if(meta.out&&c.group&&!guest&&data&&typeof data==='object'&&data.invite){
   const pool=teamsPool(c),seen=new Set();
   meta.out.invite=(Array.isArray(data.invite)?data.invite:[data.invite]).map(x=>{const obj=x&&typeof x==='object',name=String(obj?x.agent??x.name??x.codename??'':x).trim().replace(/^@/,'').toUpperCase(),a=pool.find(p=>p.name.toUpperCase()===name);if(!a||seen.has(a.id))return null;seen.add(a.id);return{agent:a,reason:String(obj?x.reason??x.motivo??x.task??'':'').trim().slice(0,200)};}).filter(Boolean).slice(0,2);
  }
- return chatApply(c,reply,data,changes,cost,meta);
+ const m=await chatApply(c,reply,data,changes,cost,meta);
+ if(plan&&chatNow()===c){kickoffPlanMerge(c,plan);chatPush({role:'system',text:kickoffPlanText(plan)});teamsSync();}
+ return m;
 }
 function applyDocAdrs(items){
  const list=$('#docAdrList');if(!list)return;const hit=[];
@@ -12098,13 +12156,14 @@ function docChatStop(discard=false){
  if(discard){teamsStop();for(const id of [...(c.guests?.keys()||[])])teamsGuestOut(c,id,true);chatStash(c);c.token=null;ui.docChat=null;}
 }
 function saveProjectDoc(form){
- const key=ui.docChat?.doc,def=PROJECT_DOCS[key];if(!def)return closeModal();
+ const key=ui.docChat?.doc,def=PROJECT_DOCS[key],plan=ui.docChat?.plan;if(!def)return closeModal();
  const vals=def.fields.map(f=>[f.name,String(form.elements.namedItem(f.name)?.value||'').trim().slice(0,f.max||8000)]),adrs=def.adrs?adrValues($('#docAdrList')):null;
  closeModal();
  let pf=$('#projectForm');if(!pf){ui.view='projects';render();pf=$('#projectForm');if(!pf)return;}
  for(const [k,v] of vals){const el=pf.elements.namedItem(k);if(el)el.value=v;}
  if(adrs){const list=pf.querySelector('#adrList');if(list)list.innerHTML=adrs.map(adrBlockHTML).join('');}
  const creating=!!ui.opsNew;if(!creating)saveProject(pf);
+ const planRes=!creating&&plan?applyKickoffPlan(plan):null;
  // Every place of the document on the page opens and lights up together: briefing, vision, scope, glossary and architecture.
  const val=Object.fromEntries(vals),rows=Object.entries(DOC_ROWS).filter(([,r])=>r.doc===key).map(([row,r])=>[$(`#projectForm [data-doc-row="${row}"]`),r]).filter(([el])=>el);
  for(const [el,r] of rows){
@@ -12112,6 +12171,7 @@ function saveProjectDoc(form){
   if(el.tagName==='DETAILS')el.open=true;el.classList.remove('fe-updated');void el.offsetWidth;el.classList.add('fe-updated');setTimeout(()=>el.classList.remove('fe-updated'),1800);
  }
  if(creating)toast('Documentos preenchidos. Clique em Criar operação para registrar.');
+ else if(planRes)toast(`Plano atualizado: ${planRes.created} features novas, ${planRes.edited} editadas, ${planRes.sprints} sprints${planRes.skipped.length?`. Não mudei ${planRes.skipped.join(', ')}`:''}.`);
  rows[0]?.[0].scrollIntoView({block:'nearest',behavior:feReduced()?'auto':'smooth'});
 }
 /* Agent chat: in the Squad view, clicking an agent opens a phone (iMessage) with it. The agent greets (SOUL), offers the options
@@ -12242,7 +12302,7 @@ function agentChatPrompt(a,c,msgs,task){
  const feats=!p.features.length?'':p.sprints.map(s=>{const fs=sprintFeatures(s,p);return`### ${s.name}${s.goal?`: ${s.goal}`:''}\n${fs.map(f=>`- ${f.key}: ${f.title} (${STATUS[f.status]||f.status}, ${f.priority}${f.route.length?`, rota: ${names(f.route)}`:''})`).join('\n')||'(sem features)'}`;}).join('\n');
  const f=c.focus?.feature?featureById(c.focus.feature):null,adr=c.focus?.adr?(p.adrs||[]).find(x=>x.id===c.focus.adr):null;
  const history=[`${a.name}: ${c.greeting}`,...c.messages.filter(m=>!fresh.has(m.id)&&m.role!=='system').slice(-12).map(m=>`${m.role==='user'?'Pessoa':a.name}: ${m.text}`)].join('\n\n');
- return[`# Conversa com ${a.name} · ${p.code} ${p.name}`,`## Projeto\n${clip(p.briefing,3000)||'(sem briefing)'}`,p.scopeIn?.trim()?`Dentro do escopo:\n${clip(p.scopeIn,1500)}`:'',p.scopeOut?.trim()?`Fora do escopo:\n${clip(p.scopeOut,1500)}`:'',`## Squad ${q?.name||''}\n${team}`,`## Features\n${feats||'(nenhuma ainda)'}`,
+ return[`# Conversa com ${a.name} · ${p.code} ${p.name}`,`## Projeto\n${clip(p.briefing,3000)||'(sem briefing)'}`,p.scopeIn?.trim()?`Dentro do escopo:\n${clip(p.scopeIn,1500)}`:'',p.scopeOut?.trim()?`Fora do escopo:\n${clip(p.scopeOut,1500)}`:'',`## Squad ${q?.name||''}\n${team}`,`## Features\n${['commander','po','architect'].includes(a.role)&&p.features.length?projectPanorama(p):feats||'(nenhuma ainda)'}`,
   a.role==='architect'&&p.architecture?.trim()?`## Visão de arquitetura\n${clip(p.architecture,2500)}`:'',a.role==='architect'&&(p.adrs||[]).length?`## ADRs\n${p.adrs.map((x,i)=>`- ADR-${String(i+1).padStart(3,'0')}: ${x.title} (${x.status})`).join('\n')}`:'',
   f?`## Feature em foco: ${f.key}, ${f.title}\n${STATUS[f.status]||f.status} · ${f.priority} · ${SCOPES[f.scope]||f.scope}\n\n### Escopo\n${clip(f.description,2500)||'(vazio)'}\n\n### Critérios de aceitação\n${clip(f.criteria,2000)||'(vazio)'}\n\n### Tarefas\n${clip(f.tasks,2000)||'(vazio)'}`:'',
   adr?`## ADR em foco: ${adr.title} (${adr.status})\n${clip(adr.content,4000)||'(sem conteúdo)'}`:'',
@@ -12439,6 +12499,13 @@ function commandPreviewHTML(){
  const team=squad(),sel=team.some(a=>a.id===ui.selectedId)?ui.selectedId:team[0]?.id,win=(ui.bridge.platform||navigator.platform||'').toLowerCase().startsWith('win');
  return`<div class="cmd-preview"><div class="cmd-preview-head"><span class="eyebrow">PREVIEW DA CHAMADA NO TERMINAL</span><div class="flex wrap"><select id="cmdAgent" aria-label="Agente do preview">${team.map(a=>`<option value="${E(a.id)}" ${a.id===sel?'selected':''}>${E(a.name)} / ${E(roleShort(a))}</option>`).join('')}</select><select id="cmdShell" aria-label="Shell do preview"><option value="powershell" ${win?'selected':''}>PowerShell</option><option value="bash" ${win?'':'selected'}>Bash</option></select><button type="button" class="btn ghost sm" data-action="cmd-copy">${icon('copy')}Copiar</button></div></div><pre id="cmdPreview" class="cmd-lines"></pre><span class="hint" id="cmdNote"></span></div>`;
 }
+/* Whole-project view for the agents that write sprints, features and docs (commander, PRD, ADR): every feature with status, scope and criteria, so they reuse instead of duplicating. */
+function projectPanorama(p=project(),opts={}){
+ const clip=(t,n)=>{t=String(t||'').replace(/\s+/g,' ').trim();return t.length>n?t.slice(0,n)+' […]':t;};
+ let out=(p.sprints||[]).map(s=>{const fs=sprintFeatures(s,p).filter(f=>f.id!==opts.skip);return fs.length?`### ${s.name}${s.goal?`: ${s.goal}`:''}\n${fs.map(f=>{const d=clip(f.description,200),c=clip(f.criteria,140),deps=(f.dependencies||[]).map(i=>p.features.find(x=>x.id===i)?.key).filter(Boolean);return`- ${f.key}: ${f.title} (${STATUS[f.status]||f.status}, ${f.priority}, ${SCOPES[f.scope]||f.scope}${deps.length?`, depende de ${deps.join(' ')}`:''})${d?`\n  Escopo: ${d}`:''}${c?`\n  Critérios: ${c}`:''}`;}).join('\n')}`:'';}).filter(Boolean).join('\n');
+ if(out.length>12000)out=out.slice(0,12000)+'\n[...]';
+ return(out||'(nenhuma feature ainda)')+'\n\nConfira este panorama antes de propor ou escrever: não repita o escopo de outra feature; reaproveite-a ou declare dependência. Se algo parecer duplicado, aponte.';
+}
 function buildStepPrompt(f,a,p){
  const route=f.route.map(id=>agentById(id)),next=route[f.step+1],clip=(t,n)=>t.length>n?t.slice(0,n)+'\n[...]':t,sp=sprintOf(f,p);
  const brief=f.briefs?.length===f.route.length?f.briefs[f.step]:'',mates=Object.entries(squadSubagents(a,p).keys).map(([key,id])=>{const m=agentById(id);return`- ${key}: ${m.name}, ${roleLabel(m)}`;});
@@ -12451,11 +12518,12 @@ function buildStepPrompt(f,a,p){
   `## Sua atribuição\nVocê é ${a.name}, ${roleLabel(a)}. Etapa ${f.step+1} de ${f.route.length} da rota: ${route.map(x=>x?.name||'?').join(' > ')}.`,
   `## Feature ${f.key}: ${f.title}\nPrioridade: ${f.priority} / Área: ${SCOPES[f.scope]}${sp?` / Sprint: ${sp.name}${sp.goal?`\nObjetivo da sprint: ${sp.goal}`:''}`:''}\n\nEscopo:\n${f.description||'(não detalhado)'}\n\nCritérios de aceitação:\n${f.criteria}`,
   deps?`## Dependências já aprovadas\n${deps}`:'',
+  ['commander','po','architect'].includes(a.role)&&p.features.some(x=>x.id!==f.id)?`## Panorama do projeto (todas as sprints e features)\n${projectPanorama(p,{skip:f.id})}`:'',
   f.context?`## Contexto de handoff registrado\n${clip(f.context,6000)}`:'',
   previous?`## Entregas anteriores nesta rota\n${previous}`:'',
   brief?`## Instrução do comandante para você\n${brief}`:'',
   mates.length?`## Colegas que você pode chamar\nUse a ferramenta Agent com subagent_type igual ao identificador para pedir a um colega uma decisão, uma revisão ou uma parte que é da especialidade dele. Explique no pedido o que precisa e o contexto. O colega trabalha na mesma pasta, com as ferramentas dele, e devolve a resposta para você. Não delegue a sua etapa inteira.\n${mates.join('\n')}`:'',
-  `## Entrega esperada\nSiga rigorosamente o guia de convenções e boas práticas anexado às suas instruções. Trabalhe na pasta desta operação, que é o diretório de trabalho atual (projects/${p.folder}): todo código, teste e documento da implementação fica dentro dela, e nada fora dela deve ser criado ou alterado. Execute a sua parte respeitando o seu papel. Não declare testes ou verificações que não executou.\n${next?`Ao terminar, responda com um resumo de handoff para ${next.name} (${roleLabel(next)}): o que foi feito, arquivos alterados, decisões, pendências e o próximo passo.`:'Você é a última etapa. Responda com um relatório para a revisão humana: o que foi entregue, arquivos alterados, evidências de verificação executadas, lacunas e riscos.'}\nResponda em português do Brasil.`
+  `## Entrega esperada\nSiga rigorosamente o guia de convenções e boas práticas anexado às suas instruções. Trabalhe na pasta desta operação, que é o diretório de trabalho atual (projects/${p.folder}): todo código, teste e documento da implementação fica dentro dela, e nada fora dela deve ser criado ou alterado. Execute a sua parte respeitando o seu papel. Não declare testes ou verificações que não executou.\n${next?`Ao terminar, responda com um resumo de handoff para ${next.name} (${roleLabel(next)}): o que foi feito, arquivos alterados, decisões, pendências e o próximo passo.`:'Você é a última etapa. Responda com um relatório para a revisão humana: o que foi entregue, arquivos alterados, evidências de verificação executadas, lacunas e riscos. Termine o relatório com a seção "## Cenários de teste humano": passos que uma pessoa executa à mão para validar a feature (onde abrir, o que fazer, o resultado esperado), um cenário por critério de aceitação e ao menos um de erro ou borda, sem repetir comandos de lint, typecheck ou teste automatizado.'}\nResponda em português do Brasil.`
  ].filter(Boolean).join('\n\n');
 }
 function newConsole(meta){const c={id:meta.runId||id('console'),lines:[],status:'running',startedAt:nowISO(),...meta};ui.consoles.push(c);if(ui.consoles.length>12)ui.consoles.shift();ui.consoleId=c.id;return c;}
@@ -12755,6 +12823,7 @@ function commanderPlanPrompt(p,owner,suggest){
  return[`# Operação ${p.code}: ${p.name}`,`## Briefing\n${clip(p.briefing,4000)}`,
   `## O que vai ser executado\n${owner.kind==='feature'?`Só a feature ${suggest[0].f.key}.`:`${sp?.name||'Sprint'}${sp?.goal?`: ${sp.goal}`:''}`}`,
   `## Squad (codinome / papel / descrição)\n${squad().filter(a=>a.role!=='commander').map(a=>`- ${a.name} / ${roleLabel(a)} / ${clip(a.description,220)}`).join('\n')}`,
+  `## Panorama do projeto (todas as sprints e features)\n${projectPanorama(p)}`,
   `## Features para planejar\n${suggest.map(({f,route,missing})=>[`### ${f.key}: ${f.title}`,`Prioridade ${f.priority} / Área: ${SCOPES[f.scope]||f.scope} / Status: ${STATUS[f.status]}${f.dependencies.length?` / Dependências: ${f.dependencies.map(id=>p.features.find(x=>x.id===id)).filter(Boolean).map(d=>`${d.key} (${STATUS[d.status]})`).join(', ')}`:''}`,f.description?`Escopo: ${clip(f.description,900)}`:'',`Critérios: ${clip(f.criteria,700)}`,f.context?`Contexto de handoff: ${clip(f.context,600)}`:'',`Rota sugerida: ${route.length?route.map(id=>agentById(id)?.name).join(' > '):'nenhuma'}${missing.length?` (faltam na squad: ${missing.join(', ')})`:''}`].filter(Boolean).join('\n')).join('\n\n')}`,
   'Monte o plano de execução.'].join('\n\n');
 }
@@ -13291,7 +13360,7 @@ function presetByName(n){
 }
 function agentTemplateOf(a){return presetByName(a?.template)||presetByName(a?.name);}
 function presetDefaults(p){
- const r=ROLES[p.role],d={name:p.name,role:p.role,specialty:p.specialty||'',icon:p.icon||'',model:p.model||r.model,effort:p.effort||'',description:p.description||r.description,prompt:presetPrompt(p),tools:['Read','Glob','Grep',...(['commander','architect','po','qa'].includes(p.role)?[]:['Edit','Write'])],mcp:(p.mcp||[]).filter(k=>Object.hasOwn(MCP_SERVERS,k)),mcpWrite:(p.mcpWrite||[]).filter(k=>Object.hasOwn(MCP_SERVERS,k)),image:'',template:p.name,...defaultSoul({name:p.name})};
+ const r=ROLES[p.role],d={name:p.name,role:p.role,specialty:p.specialty||'',icon:p.icon||'',model:p.model||r.model,effort:p.effort||'',description:p.description||r.description,prompt:presetPrompt(p),tools:['Read','Glob','Grep',...(['commander','architect','po','qa'].includes(p.role)?[]:['Edit','Write']),'Bash'],mcp:(p.mcp||[]).filter(k=>Object.hasOwn(MCP_SERVERS,k)),mcpWrite:(p.mcpWrite||[]).filter(k=>Object.hasOwn(MCP_SERVERS,k)),image:'',template:p.name,...defaultSoul({name:p.name})};
  d.conventions=defaultConventions(d,p.conv);return d;
 }
 // "Restaurar default": refills the studio form with the template values; saving applies them, cancelling discards them.
@@ -13345,6 +13414,13 @@ function migrateCatalogAgents(ws){
    if(Array.isArray(a.mcp)&&a.mcp.length===1&&a.mcp[0]==='figma-api'&&!(a.mcpWrite||[]).length){a.mcp=[...t.mcp];a.mcpWrite=[...t.mcpWrite];changed=true;}
   }
   ws.settings.catalogVersion=4;changed=true;
+ }
+ if((ws.settings.catalogVersion||1)<5){
+  // Every agent gets Bash, so they can run git and the project's lint/typecheck/tests. Only adds it, never removes a choice.
+  for(const a of ws.agents){
+   if(Array.isArray(a.tools)&&!a.tools.includes('Bash')){a.tools.push('Bash');changed=true;}
+  }
+  ws.settings.catalogVersion=5;changed=true;
  }
  return changed;
 }
