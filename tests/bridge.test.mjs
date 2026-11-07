@@ -126,7 +126,7 @@ test('squad colleagues go to claude as an --agents file, with forwarded subagent
   const res = await api('/api/runs', { method: 'POST', body: JSON.stringify({ prompt: 'implement', options: { cwd: workdir, agents, forwardSubagents: true, tools: ['Read', 'Agent'] } }) });
   assert.equal(res.status, 201, await res.clone().text());
   const { runId, args } = await res.json();
-  assert.equal(args[args.indexOf('--agents') + 1], '<agents-file>');
+  assert.equal(args[args.indexOf('--agents') + 1], '<agents-json>');
   assert.ok(args.includes('--forward-subagent-text'));
   const events = await collect(runId);
   const init = events.find(e => e.type === 'system' && e.subtype === 'init');

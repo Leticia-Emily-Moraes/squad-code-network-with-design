@@ -359,6 +359,17 @@ function validateAgents(value) {
   return entries.length ? out : null;
 }
 
+const AGENTS_ARG_MAX = process.platform === 'win32' ? 30000 : 120000;
+function agentsArg(agents) {
+  let json = JSON.stringify(agents);
+  if (json.length <= AGENTS_ARG_MAX) return json;
+  const keys = Object.keys(agents), total = keys.reduce((n, k) => n + agents[k].prompt.length, 0), over = json.length - AGENTS_ARG_MAX;
+  const keep = Math.max(500, Math.floor(total - over * 1.3) / keys.length);
+  const cut = {};
+  for (const k of keys) cut[k] = { ...agents[k], prompt: agents[k].prompt.slice(0, keep) };
+  return JSON.stringify(cut);
+}
+
 async function startRun(body) {
   const prompt = typeof body.prompt === 'string' ? body.prompt : '';
   if (!prompt.trim()) throw new Error('Prompt vazio.');
@@ -372,7 +383,7 @@ async function startRun(body) {
 
   const id = crypto.randomUUID();
   const args = ['-p', '--output-format', 'stream-json', '--verbose'];
-  let sysFile = null, settingsFile = null, agentsFile = null, mcpFile = null;
+  let sysFile = null, settingsFile = null, agentsJson = null, mcpFile = null;
   // OS temp cleanup can remove the (usually empty) folder while the bridge keeps running.
   if (systemPrompt.trim() || opts.projectRun || opts.agents || opts.mcpServers) await fsp.mkdir(TMP_DIR, { recursive: true });
   if (systemPrompt.trim()) {
@@ -388,9 +399,10 @@ async function startRun(body) {
     args.push('--settings', settingsFile);
   }
   if (opts.agents) {
-    agentsFile = path.join(TMP_DIR, `${id}.agents.json`);
-    await fsp.writeFile(agentsFile, JSON.stringify(opts.agents), 'utf8');
-    args.push('--agents', agentsFile);
+    // The CLI takes --agents as inline JSON (a file path is read as no agents at all, and every colleague call fails with
+    // "Agent type not found"). One argument has a size limit (128 KB on Linux, 32 KB on Windows), so long prompts are cut to fit.
+    agentsJson = agentsArg(opts.agents);
+    args.push('--agents', agentsJson);
   }
   if (opts.mcpServers) {
     mcpFile = path.join(TMP_DIR, `${id}.mcp.json`);
@@ -419,8 +431,8 @@ async function startRun(body) {
   });
   const run = {
     id, status: 'running', startedAt: new Date().toISOString(), endedAt: null, label: String(body.label || '').slice(0, 200),
-    cwd: opts.cwd, args: args.map(a => a === sysFile ? '<system-prompt-file>' : a === settingsFile ? '<settings-file>' : a === agentsFile ? '<agents-file>' : a === mcpFile ? '<mcp-file>' : a), child, events: [], clients: new Set(),
-    result: null, sysFile, settingsFile, agentsFile, mcpFile, timer: null, cancelled: false,
+    cwd: opts.cwd, args: args.map(a => a === sysFile ? '<system-prompt-file>' : a === settingsFile ? '<settings-file>' : a === agentsJson ? '<agents-json>' : a === mcpFile ? '<mcp-file>' : a), child, events: [], clients: new Set(),
+    result: null, sysFile, settingsFile, mcpFile, timer: null, cancelled: false,
     // History: who ran it and where (body.meta, whitelisted in db.js), saved events count and the batch waiting to be written.
     // Without a database yet (direct API use before the setup), the run still works but stays out of the history.
     meta: dbModule.runMeta(body.meta), project: typeof body.options?.project === 'string' ? body.options.project.slice(0, 80) : '', persist: !!store, saved: 0, pending: [], flushTimer: null,
@@ -466,7 +478,7 @@ async function startRun(body) {
     if (run.persist) try { store.finishRun(run, exit); } catch (e) { console.warn(`Histórico da execução ${id} não finalizado: ${e.message}`); }
     for (const res of run.clients) res.end();
     run.clients.clear();
-    for (const file of [run.sysFile, run.settingsFile, run.agentsFile, run.mcpFile]) if (file) fsp.rm(file, { force: true }).catch(() => {});
+    for (const file of [run.sysFile, run.settingsFile, run.mcpFile]) if (file) fsp.rm(file, { force: true }).catch(() => {});
     run.child = null;
     // Keep finished runs for 30 minutes so late subscribers can replay.
     setTimeout(() => runs.delete(id), 30 * 60 * 1000).unref();
