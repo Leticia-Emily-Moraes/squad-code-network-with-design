@@ -12317,7 +12317,7 @@ function sendAgentChat(){
 }
 function agentChatPrompt(a,c,msgs,task){
  const p=project(),q=squadById(p.squadId),clip=(t,n)=>acClip(t,n),fresh=new Set(msgs.map(m=>m.id)),names=ids=>ids.map(x=>agentById(x)?.name).filter(Boolean).join(' → ');
- const team=p.agentIds.map(agentById).filter(Boolean).map(x=>`- ${x.name}: ${roleLabel(x)}${x.id===a.id?' (você)':''}`).join('\n');
+ const team=p.agentIds.map(agentById).filter(Boolean).map(x=>`- ${x.name}: ${roleLabel(x)}${x.id===a.id?' (você)':''}${mcpOf(x).includes('figma-remote')?`, no Figma ${mcpWriteOf(x).includes('figma-remote')?'cria e edita arquivos':'só lê'} (nas execuções da feature)`:''}`).join('\n')+(p.agentIds.some(i=>mcpOf(agentById(i)).includes('figma-remote'))?'\nAs ferramentas (Figma, arquivos, comandos) só funcionam quando a feature é executada com a rota da squad, nunca neste chat. Se a pessoa pedir algo no Figma, diga quem da lista acima faz isso e que é preciso rodar a feature pelo plano de execução. Não diga que você só lê ou que não cria se a lista diz o contrário.':'');
  const feats=!p.features.length?'':p.sprints.map(s=>{const fs=sprintFeatures(s,p);return`### ${s.name}${s.goal?`: ${s.goal}`:''}\n${fs.map(f=>`- ${f.key}: ${f.title} (${STATUS[f.status]||f.status}, ${f.priority}${f.route.length?`, rota: ${names(f.route)}`:''})`).join('\n')||'(sem features)'}`;}).join('\n');
  const f=c.focus?.feature?featureById(c.focus.feature):null,adr=c.focus?.adr?(p.adrs||[]).find(x=>x.id===c.focus.adr):null;
  const history=[`${a.name}: ${c.greeting}`,...c.messages.filter(m=>!fresh.has(m.id)&&m.role!=='system').slice(-12).map(m=>`${m.role==='user'?'Pessoa':a.name}: ${m.text}`)].join('\n\n');
