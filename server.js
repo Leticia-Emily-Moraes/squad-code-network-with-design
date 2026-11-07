@@ -395,7 +395,7 @@ async function startRun(body) {
     settingsFile = path.join(TMP_DIR, `${id}.settings.json`);
     // The file tools also refuse reads outside the project folder (and --add-dir), so agents never take this app or the
     // person's other folders for the project.
-    await fsp.writeFile(settingsFile, JSON.stringify({ claudeMdExcludes: APP_MEMORY_EXCLUDES, permissions: { blockReadsOutsideWorkingDirectories: true } }), 'utf8');
+    await fsp.writeFile(settingsFile, JSON.stringify({ claudeMdExcludes: APP_MEMORY_EXCLUDES, permissions: { blockReadsOutsideWorkingDirectories: true }, includeCoAuthoredBy: false, attribution: { commit: '', pr: '' } }), 'utf8');
     args.push('--settings', settingsFile);
   }
   if (opts.agents) {
