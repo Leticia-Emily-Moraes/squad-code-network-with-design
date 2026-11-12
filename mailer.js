@@ -9,7 +9,7 @@
  *   SQUAD_NOTIFY_EMAIL   recipient (default: SQUAD_SMTP_USER)
  *   SQUAD_SMTP_HOST      default smtp.gmail.com
  *   SQUAD_SMTP_PORT      default 465 (implicit TLS); any other port uses STARTTLS
- *   SQUAD_SMTP_TLS=off   plain SMTP, accepted only for a loopback host (tests)
+ *   SQUAD_SMTP_TLS       implicit | starttls overrides the port's choice; off = plain SMTP, accepted only for a loopback host (tests)
  *   SQUAD_MAIL_DELAY_MS  how long notices wait to go out together (default 60000)
  *   SQUAD_MAIL_MAX_HOUR  e-mails per hour at most (default 20); beyond it notices stay in the app only
  */
@@ -41,7 +41,7 @@ function mailConfig(env = process.env) {
   else if (env.SQUAD_SMTP_TLS === 'off' && !loopback) error = 'SQUAD_SMTP_TLS=off só vale para um servidor SMTP local (testes).';
   return {
     configured: !error, error, host, port, user, pass, to,
-    tls: env.SQUAD_SMTP_TLS === 'off' ? 'none' : port === 465 ? 'implicit' : 'starttls',
+    tls: env.SQUAD_SMTP_TLS === 'off' ? 'none' : ['implicit', 'starttls'].includes(env.SQUAD_SMTP_TLS) ? env.SQUAD_SMTP_TLS : port === 465 ? 'implicit' : 'starttls',
     delayMs: Number.isFinite(delay) && delay >= 0 && delay <= 600000 ? delay : 60000,
     maxPerHour: Number.isInteger(max) && max >= 1 && max <= 500 ? max : 20,
   };
@@ -117,12 +117,23 @@ class Conn {
   cmd(line, codes, step = line.split(' ')[0]) { this.sock.write(line + '\r\n'); return this.expect(codes, step); }
 }
 
+// SNI takes a host name only (an IP address there is deprecated in Node).
+const sni = host => net.isIP(host) ? undefined : host;
 const caps = reply => reply.lines.slice(1).map(l => l.toUpperCase());
+
+// Network and TLS failures in Portuguese, with the code for whoever needs to look it up.
+function netMessage(e, cfg) {
+  const at = `${cfg.host}:${cfg.port}`, code = e.code || '';
+  if (['ENOTFOUND', 'EAI_AGAIN'].includes(code)) return `Não encontrei ${cfg.host} (${code}). Confira a internet ou SQUAD_SMTP_HOST.`;
+  if (['ECONNREFUSED', 'ECONNRESET', 'ETIMEDOUT', 'EHOSTUNREACH', 'ENETUNREACH'].includes(code)) return `Não consegui conectar a ${at} (${code}). Confira a internet, a porta (465 ou 587) e se algum firewall bloqueia SMTP.`;
+  if (/CERT|SELF_SIGNED|UNABLE_TO|ERR_TLS|SSL/i.test(code + ' ' + e.message)) return `A conexão segura com ${at} falhou: ${e.message}${code ? ` (${code})` : ''}.`;
+  return `Falha ao falar com ${at}: ${e.message}`;
+}
 
 /** Sends one e-mail. Never puts the password in an error. */
 async function sendMail(cfg, { subject, text }, { timeoutMs = 20000 } = {}) {
   if (!cfg.configured) throw new SmtpError(cfg.error);
-  const sock = cfg.tls === 'implicit' ? tls.connect({ host: cfg.host, port: cfg.port, servername: cfg.host }) : net.connect({ host: cfg.host, port: cfg.port });
+  const sock = cfg.tls === 'implicit' ? tls.connect({ host: cfg.host, port: cfg.port, servername: sni(cfg.host) }) : net.connect({ host: cfg.host, port: cfg.port });
   const conn = new Conn(sock);
   const timer = setTimeout(() => { conn.fail(new SmtpError(`O servidor SMTP não respondeu em ${Math.round(timeoutMs / 1000)} s.`)); conn.sock.destroy(); }, timeoutMs);
   try {
@@ -131,7 +142,7 @@ async function sendMail(cfg, { subject, text }, { timeoutMs = 20000 } = {}) {
     if (cfg.tls === 'starttls') {
       if (!caps(ehlo).some(c => c.startsWith('STARTTLS'))) throw new SmtpError('O servidor SMTP não oferece STARTTLS. Use a porta 465.');
       await conn.cmd('STARTTLS', [220]);
-      const secure = tls.connect({ socket: conn.sock, servername: cfg.host });
+      const secure = tls.connect({ socket: conn.sock, servername: sni(cfg.host) });
       await new Promise((resolve, reject) => { secure.once('secureConnect', resolve); secure.once('error', reject); });
       conn.attach(secure);
       ehlo = await conn.cmd('EHLO [127.0.0.1]', [250]);
@@ -156,6 +167,9 @@ async function sendMail(cfg, { subject, text }, { timeoutMs = 20000 } = {}) {
     conn.sock.write('QUIT\r\n');
     await conn.read().catch(() => {});
     return { to: cfg.to };
+  } catch (e) {
+    if (e instanceof SmtpError) throw e;
+    throw new SmtpError(netMessage(e, cfg));
   } finally {
     clearTimeout(timer);
     conn.sock.end();

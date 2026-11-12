@@ -11071,7 +11071,7 @@ function notifGo(nid){
  if(n.pid&&n.pid!==state.projectId){if(!state.projects.some(p=>p.id===n.pid))return toast('Esse projeto não existe mais.','error');if(!homeSwitch(n.pid))return;}
  if(['plan-awaiting','plan-fallback','round-end'].includes(n.kind))return openOpsChat();
  if(n.kind==='plan-empty')return openSquadStudio();
- if(n.fid&&featureById(n.fid))return openOpsFeature(n.fid);
+ if(n.fid&&featureById(n.fid)){goView('projects');return openFeature(n.fid);}
  if(n.fid)toast('Essa feature não existe mais.','error');
 }
 function notifySettingsHTML(){
@@ -13141,7 +13141,7 @@ async function liveStep(f,a){
   const message=exit.error||'Falha na execução do Claude Code.';
   f.outputs.push({agentId:a.id,at:nowISO(),text:`[FALHA] ${message}`,simulated:false,error:true,costUsd:exit.costUsd??null,durationMs:null,sessionId:exit.sessionId??null});
   f.status='ready';f.currentAgentId=null;f.step=0;runner=null;clearTimeout(timer);
-  log(`${a.name} falhou em ${f.key}: ${message.slice(0,400)}. A feature voltou para Prontas.`,'agent',a.id,p);p.logs.at(-1).simulated=false;notify('step-failed',{p,f,title:`${a.name} falhou em ${f.key}`,text:`${message.slice(0,400)} A feature voltou para Prontas e a execução parou.`});
+  log(`${a.name} falhou em ${f.key}: ${message.slice(0,400)}. A feature voltou para Prontas.`,'agent',a.id,p);p.logs.at(-1).simulated=false;notify('step-failed',{p,f,title:`${a.name} falhou em ${f.key}`,text:`${message.slice(0,400).replace(/[.!?]?\s*$/,'.')} A feature voltou para Prontas e a execução parou.`});
   roomTyping(null);roomPush({kind:'say',agentId:a.id,featureKey:f.key,text:`Não consegui concluir a ${f.key}: ${message.slice(0,600)}`,error:true});roomPush({kind:'system',text:`${f.key} voltou para Prontas e a execução parou.`,tone:'error'});
   save();render();refreshFeatureModal();refreshConsole();toast(`${a.name} falhou: ${message.slice(0,160)}`,'error');return;
  }

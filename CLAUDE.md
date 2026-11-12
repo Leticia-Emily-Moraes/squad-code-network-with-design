@@ -110,14 +110,16 @@ code of a built-in server (`BUILTIN_MCP_FILES`) so the export can ship it. The s
 (`FIGMA_CACHE_TTL_S`, `FIGMA_CACHE_DIR`; key = sha256 of token + URL, private folder; errors and `figma_whoami` are never cached;
 every tool takes `fresh`).
 E-mail notifications: `mailer.js` (no dependencies) is an SMTP client for Gmail with an app password (465 implicit TLS, other
-ports STARTTLS, AUTH PLAIN/LOGIN; `SQUAD_SMTP_TLS=off` only for a loopback host, tests) plus `createMailQueue`, which groups notices
+ports STARTTLS, `SQUAD_SMTP_TLS=implicit|starttls` overrides, AUTH PLAIN/LOGIN; `SQUAD_SMTP_TLS=off` only for a loopback host, tests;
+network/TLS errors in Portuguese, `netMessage`) plus `createMailQueue`, which groups notices
 for `SQUAD_MAIL_DELAY_MS` (60 s) into one e-mail (`digest`) and keeps `SQUAD_MAIL_MAX_HOUR` (20). Settings come only from the
 environment (`mailConfig`: `SQUAD_SMTP_USER`, `SQUAD_SMTP_PASS`, `SQUAD_NOTIFY_EMAIL`, defaulting to the sender), and `server.js`
 first loads `SQUAD_ENV_FILE` (default `.env` next to it, `process.loadEnvFile`, environment wins; tests pass `''`). The page never
 picks the recipient: `POST /api/notify/email {items}` (`validateItems`: 1..20 notices, plain short text, subject without line
 breaks) answers 202 and queues; `POST /api/notify/email/test` sends at once and returns the SMTP error (a refused login says to use an
 app password, never the password); both 503 when not configured. `/api/health` carries `email` (configured, to, from, lastError,
-lastSentAt, counts; never the password). Shutdown sends what is queued (at most 8 s). Tests use a fake SMTP server on loopback.
+lastSentAt, counts; never the password). Shutdown sends what is queued (at most 8 s). Tests use a fake SMTP server on loopback (plain, implicit TLS and STARTTLS, with the
+self-signed `tests/fixtures/smtp-cert.pem` trusted through `NODE_EXTRA_CA_CERTS`).
 
 **`src/app.js` (state, UI, orchestration).**
 - One persisted `state` object (localStorage key `squad-code.network.v2`, export/import as JSON). Served by the bridge, the database

@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, existsSync, rmSync, readdirSync, realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import net from 'node:net';
+import tls from 'node:tls';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
@@ -609,12 +610,15 @@ test('MCP tools can be allowed one by one: mcp__<server>__<tool> reaches --allow
 });
 
 /* E-mail notifications: a fake SMTP server on loopback (plain, SQUAD_SMTP_TLS=off), so nothing leaves the machine. */
-function fakeSmtp({ user, pass }) {
-  const mails = [], logins = [];
-  const srv = net.createServer(sock => {
+// mode: 'plain' | 'implicit' (TLS from the start) | 'starttls' (AUTH offered only after the upgrade). Certificate in tests/fixtures,
+// trusted by the bridge through NODE_EXTRA_CA_CERTS.
+const SMTP_TLS = { key: readFileSync(path.join(ROOT, 'tests', 'fixtures', 'smtp-key.pem')), cert: readFileSync(path.join(ROOT, 'tests', 'fixtures', 'smtp-cert.pem')) };
+function fakeSmtp({ user, pass, mode = 'plain', offerStarttls = true }) {
+  const mails = [], logins = [], secureLogins = [];
+  const serve = (sock, secure) => {
     let buf = '', data = null;
     const say = l => sock.write(l + '\r\n');
-    say('220 fake ESMTP');
+    if (!secure || mode === 'implicit') say('220 fake ESMTP');
     sock.on('data', d => {
       buf += d.toString('utf8');
       for (;;) {
@@ -626,16 +630,19 @@ function fakeSmtp({ user, pass }) {
         const i = buf.indexOf('\r\n');
         if (i < 0) return;
         const line = buf.slice(0, i); buf = buf.slice(i + 2);
-        if (/^EHLO/.test(line)) { say('250-fake'); say('250 AUTH PLAIN LOGIN'); }
-        else if (/^AUTH PLAIN /.test(line)) { const [, u, p] = Buffer.from(line.slice(11), 'base64').toString().split('\0'); logins.push(u); say(u === user && p === pass ? '235 ok' : '535 5.7.8 Username and Password not accepted'); }
+        if (/^EHLO/.test(line)) { say('250-fake'); if (mode === 'starttls' && !secure) say(offerStarttls ? '250 STARTTLS' : '250 SIZE 1000'); else say('250 AUTH PLAIN LOGIN'); }
+        else if (line === 'STARTTLS' && mode === 'starttls' && !secure) { say('220 go ahead'); sock.removeAllListeners('data'); serve(new tls.TLSSocket(sock, { isServer: true, ...SMTP_TLS }), true); return; }
+        else if (/^AUTH PLAIN /.test(line)) { const [, u, p] = Buffer.from(line.slice(11), 'base64').toString().split('\0'); logins.push(u); if (secure) secureLogins.push(u); say(u === user && p === pass ? '235 ok' : '535 5.7.8 Username and Password not accepted'); }
         else if (/^(MAIL|RCPT)/.test(line)) { mails.envelope = [...(mails.envelope || []), line]; say('250 ok'); }
         else if (line === 'DATA') { data = ''; say('354 go'); }
         else if (line === 'QUIT') { say('221 bye'); sock.end(); }
         else say('502 no');
       }
     });
-  });
-  return new Promise(r => srv.listen(0, '127.0.0.1', () => r({ srv, port: srv.address().port, mails, logins })));
+    sock.on('error', () => {});
+  };
+  const srv = mode === 'implicit' ? tls.createServer(SMTP_TLS, sock => serve(sock, true)) : net.createServer(sock => serve(sock, false));
+  return new Promise(r => srv.listen(0, '127.0.0.1', () => r({ srv, port: srv.address().port, mails, logins, secureLogins })));
 }
 const decodeMail = raw => {
   const [head, body] = raw.split('\r\n\r\n');
@@ -719,4 +726,42 @@ test('e-mail notifications: plain SMTP is refused for a host that is not loopbac
   assert.equal(gmail.tls, 'implicit');
   assert.equal(gmail.to, 'a@gmail.com');
   assert.equal(mailConfig({ SQUAD_SMTP_USER: 'a@gmail.com', SQUAD_SMTP_PASS: 'x', SQUAD_SMTP_PORT: '587' }).tls, 'starttls');
+});
+
+test('e-mail notifications go over TLS: implicit TLS (Gmail 465) and STARTTLS (587), login only after encryption', async () => {
+  for (const mode of ['implicit', 'starttls']) {
+    const smtp = await fakeSmtp({ user: 'squad@example.test', pass: 'segredo', mode });
+    const dir = tmp('squad-data-mail-'); extraDirs.push(dir);
+    const b = await startBridge(dir, undefined, { NODE_EXTRA_CA_CERTS: path.join(ROOT, 'tests', 'fixtures', 'smtp-cert.pem'), SQUAD_SMTP_HOST: '127.0.0.1', SQUAD_SMTP_PORT: String(smtp.port), SQUAD_SMTP_TLS: mode, SQUAD_SMTP_USER: 'squad@example.test', SQUAD_SMTP_PASS: 'segredo' });
+    try {
+      const res = await b.api('/api/notify/email/test', { method: 'POST', body: '{}' });
+      assert.equal(res.status, 200, `${mode}: ${JSON.stringify(await res.json())}`);
+      assert.equal(smtp.mails.length, 1, mode);
+      assert.deepEqual(smtp.secureLogins, ['squad@example.test'], mode);
+      assert.match(decodeMail(smtp.mails[0]).text, /avisos importantes/);
+    } finally { await b.stop(); smtp.srv.close(); }
+  }
+});
+
+test('e-mail notifications: a server without STARTTLS on 587 is refused before the login, and an untrusted certificate fails', async () => {
+  const smtp = await fakeSmtp({ user: 'squad@example.test', pass: 'segredo', mode: 'starttls', offerStarttls: false });
+  const dir = tmp('squad-data-mail-'); extraDirs.push(dir);
+  const b = await startBridge(dir, undefined, { SQUAD_SMTP_HOST: '127.0.0.1', SQUAD_SMTP_PORT: String(smtp.port), SQUAD_SMTP_TLS: 'starttls', SQUAD_SMTP_USER: 'squad@example.test', SQUAD_SMTP_PASS: 'segredo' });
+  try {
+    const res = await b.api('/api/notify/email/test', { method: 'POST', body: '{}' });
+    assert.equal(res.status, 502);
+    assert.match((await res.json()).error, /STARTTLS/);
+    assert.deepEqual(smtp.logins, []);
+  } finally { await b.stop(); smtp.srv.close(); }
+
+  // Without NODE_EXTRA_CA_CERTS the self-signed certificate is not trusted: nothing is sent and the password never leaves.
+  const tlsSmtp = await fakeSmtp({ user: 'squad@example.test', pass: 'segredo', mode: 'implicit' });
+  const dir2 = tmp('squad-data-mail-'); extraDirs.push(dir2);
+  const b2 = await startBridge(dir2, undefined, { SQUAD_SMTP_HOST: '127.0.0.1', SQUAD_SMTP_PORT: String(tlsSmtp.port), SQUAD_SMTP_TLS: 'implicit', SQUAD_SMTP_USER: 'squad@example.test', SQUAD_SMTP_PASS: 'segredo' });
+  try {
+    const res = await b2.api('/api/notify/email/test', { method: 'POST', body: '{}' });
+    assert.equal(res.status, 502);
+    assert.ok(!(await res.json()).error.includes('segredo'));
+    assert.deepEqual(tlsSmtp.logins, []);
+  } finally { await b2.stop(); tlsSmtp.srv.close(); }
 });
