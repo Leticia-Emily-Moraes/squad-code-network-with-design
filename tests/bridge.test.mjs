@@ -5,6 +5,7 @@ import { spawn, execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, existsSync, rmSync, readdirSync, realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import net from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
@@ -25,10 +26,10 @@ const extraDirs = [], bridges = [];
 let server, token, nextPort = PORT + 1;
 
 /** Starts a bridge on its own port with `dataDir` as the database folder; several starts on one folder test restarts. */
-async function startBridge(dataDir, port = nextPort++) {
+async function startBridge(dataDir, port = nextPort++, extraEnv = {}) {
   const proc = spawn(process.execPath, [path.join(ROOT, 'server.js'), '--port', String(port)], {
     cwd: workdir,
-    env: { ...process.env, TEMP: tempRoot, TMP: tempRoot, TMPDIR: tempRoot, SQUAD_HOME: home, SQUAD_PROJECTS_DIR: projectsRoot, SQUAD_DATA_DIR: dataDir, SQUAD_CLAUDE_BIN: path.join(ROOT, 'tests', 'fake-claude.mjs'), SQUAD_PRINT_TOKEN: '1' },
+    env: { ...process.env, TEMP: tempRoot, TMP: tempRoot, TMPDIR: tempRoot, SQUAD_HOME: home, SQUAD_PROJECTS_DIR: projectsRoot, SQUAD_DATA_DIR: dataDir, SQUAD_CLAUDE_BIN: path.join(ROOT, 'tests', 'fake-claude.mjs'), SQUAD_PRINT_TOKEN: '1', SQUAD_ENV_FILE: '', SQUAD_SMTP_USER: '', SQUAD_SMTP_PASS: '', SQUAD_NOTIFY_EMAIL: '', ...extraEnv },
   });
   let out = '';
   const tok = await new Promise((resolve, reject) => {
@@ -605,4 +606,117 @@ test('MCP tools can be allowed one by one: mcp__<server>__<tool> reaches --allow
     const r = await api('/api/runs', { method: 'POST', body: JSON.stringify({ prompt: 'hello', options: { cwd: workdir, allowedTools: [bad] } }) });
     assert.equal(r.status, 400, bad);
   }
+});
+
+/* E-mail notifications: a fake SMTP server on loopback (plain, SQUAD_SMTP_TLS=off), so nothing leaves the machine. */
+function fakeSmtp({ user, pass }) {
+  const mails = [], logins = [];
+  const srv = net.createServer(sock => {
+    let buf = '', data = null;
+    const say = l => sock.write(l + '\r\n');
+    say('220 fake ESMTP');
+    sock.on('data', d => {
+      buf += d.toString('utf8');
+      for (;;) {
+        if (data !== null) {
+          const end = buf.indexOf('\r\n.\r\n');
+          if (end < 0) return;
+          data += buf.slice(0, end); buf = buf.slice(end + 5); mails.push(data); data = null; say('250 queued'); continue;
+        }
+        const i = buf.indexOf('\r\n');
+        if (i < 0) return;
+        const line = buf.slice(0, i); buf = buf.slice(i + 2);
+        if (/^EHLO/.test(line)) { say('250-fake'); say('250 AUTH PLAIN LOGIN'); }
+        else if (/^AUTH PLAIN /.test(line)) { const [, u, p] = Buffer.from(line.slice(11), 'base64').toString().split('\0'); logins.push(u); say(u === user && p === pass ? '235 ok' : '535 5.7.8 Username and Password not accepted'); }
+        else if (/^(MAIL|RCPT)/.test(line)) { mails.envelope = [...(mails.envelope || []), line]; say('250 ok'); }
+        else if (line === 'DATA') { data = ''; say('354 go'); }
+        else if (line === 'QUIT') { say('221 bye'); sock.end(); }
+        else say('502 no');
+      }
+    });
+  });
+  return new Promise(r => srv.listen(0, '127.0.0.1', () => r({ srv, port: srv.address().port, mails, logins })));
+}
+const decodeMail = raw => {
+  const [head, body] = raw.split('\r\n\r\n');
+  const subject = head.match(/^Subject: (.*(?:\r\n .*)*)/m)[1].split('\r\n ').map(w => { const m = w.match(/^=\?UTF-8\?B\?(.*)\?=$/); return m ? Buffer.from(m[1], 'base64').toString() : w; }).join('');
+  return { head, subject, text: Buffer.from(body.replace(/\r\n/g, ''), 'base64').toString() };
+};
+const waitFor = async (fn, ms = 5000) => { const t0 = Date.now(); while (!fn()) { if (Date.now() - t0 > ms) throw new Error('timeout'); await new Promise(r => setTimeout(r, 50)); } };
+
+test('e-mail notifications are off without SMTP settings: health says so and the endpoints answer 503', async () => {
+  const health = await (await api('/api/health')).json();
+  assert.equal(health.email.configured, false);
+  assert.match(health.email.error, /SQUAD_SMTP_USER/);
+  assert.equal((await api('/api/notify/email', { method: 'POST', body: JSON.stringify({ items: [{ title: 'x' }] }) })).status, 503);
+  assert.equal((await api('/api/notify/email/test', { method: 'POST', body: '{}' })).status, 503);
+  assert.equal((await fetch(`${BASE}/api/notify/email`, { method: 'POST', body: '{}' })).status, 401);
+});
+
+test('e-mail notifications: test e-mail now, notices grouped into one e-mail to the configured address only', async () => {
+  const smtp = await fakeSmtp({ user: 'squad@example.test', pass: 'abcdefghijklmnop' });
+  const dir = tmp('squad-data-mail-'); extraDirs.push(dir);
+  const b = await startBridge(dir, undefined, { SQUAD_SMTP_HOST: '127.0.0.1', SQUAD_SMTP_PORT: String(smtp.port), SQUAD_SMTP_TLS: 'off', SQUAD_SMTP_USER: 'squad@example.test', SQUAD_SMTP_PASS: 'abcdefghijklmnop', SQUAD_NOTIFY_EMAIL: 'eu@example.test', SQUAD_MAIL_DELAY_MS: '300' });
+  try {
+    const health = await (await b.api('/api/health')).json();
+    assert.equal(health.email.configured, true);
+    assert.equal(health.email.to, 'eu@example.test');
+    assert.ok(!JSON.stringify(health).includes('abcdefghijklmnop'));
+
+    const t = await b.api('/api/notify/email/test', { method: 'POST', body: '{}' });
+    assert.equal(t.status, 200);
+    assert.equal(smtp.mails.length, 1);
+    assert.deepEqual(smtp.logins, ['squad@example.test']);
+    assert.ok(smtp.mails.envelope.includes('RCPT TO:<eu@example.test>'));
+    assert.match(decodeMail(smtp.mails[0]).subject, /Teste de notificação/);
+
+    // The page cannot pick the recipient, and a subject cannot inject headers.
+    const items = [
+      { title: 'F03 Login está pronta para revisão\r\nBcc: x@evil.test', text: 'Aprove a entrega ou peça ajustes.', project: 'OP-001 Loja', action: true, at: new Date().toISOString(), to: 'x@evil.test' },
+      { title: 'Sprint 01 fechou a rodada', text: 'F03 aguarda a sua revisão.', project: 'OP-001 Loja' },
+    ];
+    const q = await b.api('/api/notify/email', { method: 'POST', body: JSON.stringify({ items, to: 'x@evil.test' }) });
+    assert.equal(q.status, 202);
+    await waitFor(() => smtp.mails.length === 2);
+    const mail = decodeMail(smtp.mails[1]);
+    assert.match(mail.subject, /^\[SQUAD\/CODE\] 2 avisos: F03 Login está pronta para revisão Bcc: x@evil\.test e mais 1$/);
+    assert.ok(!/^Bcc:/m.test(mail.head));
+    assert.match(mail.text, /\[AÇÃO\] F03 Login/);
+    assert.match(mail.text, /Sprint 01 fechou a rodada/);
+    assert.match(mail.text, /OP-001 Loja/);
+    assert.equal(smtp.mails.envelope.filter(l => l.startsWith('RCPT')).every(l => l === 'RCPT TO:<eu@example.test>'), true);
+
+    assert.equal((await b.api('/api/notify/email', { method: 'POST', body: JSON.stringify({ items: [] }) })).status, 400);
+    assert.equal((await b.api('/api/notify/email', { method: 'POST', body: JSON.stringify({ items: Array.from({ length: 21 }, () => ({ title: 'x' })) }) })).status, 400);
+    assert.equal((await b.api('/api/notify/email', { method: 'POST', body: JSON.stringify({ items: [{ text: 'sem título' }] }) })).status, 400);
+  } finally { await b.stop(); smtp.srv.close(); }
+});
+
+test('e-mail notifications: a refused login is reported without the password', async () => {
+  const smtp = await fakeSmtp({ user: 'squad@example.test', pass: 'right' });
+  const dir = tmp('squad-data-mail-'); extraDirs.push(dir);
+  const b = await startBridge(dir, undefined, { SQUAD_SMTP_HOST: '127.0.0.1', SQUAD_SMTP_PORT: String(smtp.port), SQUAD_SMTP_TLS: 'off', SQUAD_SMTP_USER: 'squad@example.test', SQUAD_SMTP_PASS: 'wrong-secret' });
+  try {
+    const res = await b.api('/api/notify/email/test', { method: 'POST', body: '{}' });
+    assert.equal(res.status, 502);
+    const body = await res.json();
+    assert.match(body.error, /senha de app/);
+    assert.ok(!body.error.includes('wrong-secret'));
+    const health = await (await b.api('/api/health')).json();
+    assert.match(health.email.lastError, /senha de app/);
+    assert.equal(health.email.to, 'squad@example.test');
+  } finally { await b.stop(); smtp.srv.close(); }
+});
+
+test('e-mail notifications: plain SMTP is refused for a host that is not loopback', async () => {
+  const { mailConfig } = await import('../mailer.js');
+  const cfg = mailConfig({ SQUAD_SMTP_HOST: 'smtp.gmail.com', SQUAD_SMTP_TLS: 'off', SQUAD_SMTP_USER: 'a@b.test', SQUAD_SMTP_PASS: 'x' });
+  assert.equal(cfg.configured, false);
+  assert.match(cfg.error, /SQUAD_SMTP_TLS=off/);
+  const gmail = mailConfig({ SQUAD_SMTP_USER: 'a@gmail.com', SQUAD_SMTP_PASS: 'abcd efgh ijkl mnop' });
+  assert.equal(gmail.configured, true);
+  assert.equal(gmail.pass, 'abcdefghijklmnop');
+  assert.equal(gmail.tls, 'implicit');
+  assert.equal(gmail.to, 'a@gmail.com');
+  assert.equal(mailConfig({ SQUAD_SMTP_USER: 'a@gmail.com', SQUAD_SMTP_PASS: 'x', SQUAD_SMTP_PORT: '587' }).tls, 'starttls');
 });

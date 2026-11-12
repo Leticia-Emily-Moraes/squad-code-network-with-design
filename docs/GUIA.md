@@ -260,6 +260,30 @@ A proposta de distribuição usa regras por escopo. Por exemplo, full-stack perc
 
 A simulação é sequencial, pode ser pausada, retomada ou interrompida e registra as transições. Um spawn individual atua somente com o agente selecionado. Um handoff manual escolhe origem, destino, feature e contexto, sem executar automaticamente a atividade.
 
+## 🔔 Notificações
+
+O sino no topo avisa quando uma feature precisa de você: o plano do comandante espera aprovação, uma entrega fechou a rota e está para revisão, um agente falhou numa etapa, a rota tem alguém que saiu da squad, nenhuma rota é possível ou a rodada terminou. O número no sino conta os avisos não lidos e clicar num aviso leva até a feature ou ao chat da operação. Aprovar o plano ou a entrega marca o aviso como lido. A lista fica no navegador (até 100 avisos) e aparece em todas as abas abertas.
+
+Em **Configurações > Notificações** você escolhe, para cada tipo, se ele fica desligado, só no app ou no app e por e-mail. Ali também ficam as notificações do sistema (quando a aba está em segundo plano; o navegador pede permissão ao ligar), o contador `(2)` no título da aba e um som curto.
+
+### E-mail pelo Gmail
+
+O e-mail sai pelo bridge, então só funciona com o app aberto por `npm start`. Os avisos próximos chegam juntos num e-mail só (a cada 60 s) e há um limite de 20 e-mails por hora. A simulação nunca manda e-mail.
+
+1. Ligue a verificação em duas etapas da conta Google e crie uma **senha de app** em myaccount.google.com/apppasswords.
+2. Crie um arquivo `.env` ao lado do `server.js` (ele já é ignorado pelo git):
+
+```text
+SQUAD_SMTP_USER=voce@gmail.com
+SQUAD_SMTP_PASS=abcd efgh ijkl mnop
+# opcional: outro destinatário (o padrão é o próprio remetente)
+SQUAD_NOTIFY_EMAIL=voce@gmail.com
+```
+
+3. Reinicie o bridge. O terminal mostra `Notificações por e-mail: ...` e a aba Notificações ganha o botão **E-mail de teste**.
+
+A senha fica só nesse arquivo: nunca vai para o workspace, o banco, os backups ou o export, e a página não escolhe o destinatário. Para a execução e os e-mails continuarem, a aba e o bridge precisam seguir abertos e o Mac não pode dormir (`caffeinate -i npm start` ajuda). Trocar de usuário no macOS não interrompe nada.
+
 ## 🎮 Controles
 
 | Controle | Ação |
@@ -311,6 +335,7 @@ Use **Exportar workspace** nas configurações para guardar um backup JSON e **I
 squad-code-network/
   index.html                 # Interface completa, pronta para abrir
   server.js                  # Bridge local: serve o HTML e executa claude -p
+  mailer.js                  # Notificações por e-mail: cliente SMTP (Gmail) e fila que agrupa os avisos
   db.js                      # Banco SQLite (better-sqlite3): workspace, versões, sala, conversas e execuções
   package.json               # npm start / npm test; dependência better-sqlite3
   build.py                   # Recompila o HTML sem dependências

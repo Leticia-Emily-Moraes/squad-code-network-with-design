@@ -12,6 +12,9 @@
  *   SQUAD_HOME        overrides the home dir used for ~/.claude/settings.json (tests)
  *   SQUAD_PROJECTS_DIR root of the per-project folders (default: ./projects next to this file)
  *   SQUAD_DATA_DIR    folder of the SQLite database, squad.db (default: ./data next to this file)
+ *   SQUAD_SMTP_*, SQUAD_NOTIFY_EMAIL, SQUAD_MAIL_*  e-mail notifications through Gmail SMTP (see mailer.js)
+ *   SQUAD_ENV_FILE    file with KEY=value lines loaded at start (default: .env next to this file; empty = none). Variables
+ *                     already in the environment win.
  */
 const http = require('node:http');
 const fs = require('node:fs');
@@ -22,6 +25,9 @@ const crypto = require('node:crypto');
 const { spawn, execFile } = require('node:child_process');
 
 const ROOT = __dirname;
+// Settings that must stay out of the workspace (the Gmail app password) can live in a git-ignored .env next to this file.
+const ENV_FILE = process.env.SQUAD_ENV_FILE ?? path.join(__dirname, '.env');
+if (ENV_FILE && fs.existsSync(ENV_FILE)) { try { process.loadEnvFile(ENV_FILE); } catch (e) { console.warn(`SQUAD/CODE: não foi possível ler ${ENV_FILE}: ${e.message}`); } }
 const argPort = process.argv.indexOf('--port');
 const PORT = Number(argPort > -1 ? process.argv[argPort + 1] : process.env.SQUAD_PORT) || 4317;
 const HOST = '127.0.0.1';
@@ -43,6 +49,10 @@ const DB_FILE = path.join(DATA_DIR, 'squad.db');
 const LEGACY_FILE = path.join(DATA_DIR, 'workspace.json');
 const MAX_WORKSPACE = 64 * 1024 * 1024;
 const dbModule = require('./db.js');
+const mailer = require('./mailer.js');
+const MAIL = mailer.mailConfig();
+const mailQueue = mailer.createMailQueue(MAIL, { appUrl: `http://${HOST}:${PORT}` });
+const mailStatus = () => ({ configured: MAIL.configured, error: MAIL.error, to: MAIL.configured ? MAIL.to : '', from: MAIL.configured ? MAIL.user : '', delayMs: MAIL.delayMs, maxPerHour: MAIL.maxPerHour, ...mailQueue.status() });
 if (dbModule.driverError) { console.error(`SQUAD/CODE: ${dbModule.driverError}`); process.exit(1); }
 const nodeMajor = Number(process.versions.node.split('.')[0]);
 if (nodeMajor < 22) console.warn(`SQUAD/CODE pede o Node 22 ou mais novo (este é o ${process.version}). Atualize se algo falhar.`);
@@ -577,7 +587,20 @@ async function handle(req, res) {
     if (req.method === 'GET' && url.pathname === '/api/health') {
       const bin = url.searchParams.get('claudePath') || DEFAULT_BIN;
       const info = await claudeVersion(bin);
-      return json(res, 200, { ok: true, bridge: 'squad-code', claudeVersion: info.version, claudePath: info.resolved, claudeError: info.error, defaultCwd: process.cwd(), projectsDir: longPath(PROJECTS_DIR), home: HOME, platform: process.platform, activeRuns: activeCount(), maxConcurrent, dbReady: !setupNeeded(), dbPath: store?.file || DB_FILE, figmaToken: Boolean(process.env.FIGMA_TOKEN) });
+      return json(res, 200, { ok: true, bridge: 'squad-code', claudeVersion: info.version, claudePath: info.resolved, claudeError: info.error, defaultCwd: process.cwd(), projectsDir: longPath(PROJECTS_DIR), home: HOME, platform: process.platform, activeRuns: activeCount(), maxConcurrent, dbReady: !setupNeeded(), dbPath: store?.file || DB_FILE, figmaToken: Boolean(process.env.FIGMA_TOKEN), email: mailStatus() });
+    }
+    // E-mail notifications: the page sends the notices, the bridge groups them (MAIL.delayMs) and sends them to the address of its
+    // own environment. The page never chooses the recipient. /test sends at once and reports the SMTP error.
+    if (req.method === 'POST' && (url.pathname === '/api/notify/email' || url.pathname === '/api/notify/email/test')) {
+      if (!MAIL.configured) return fail(res, 503, MAIL.error);
+      const body = await readBody(req);
+      if (url.pathname.endsWith('/test')) {
+        const items = mailer.validateItems([{ title: 'Teste de notificação', text: 'Se este e-mail chegou, os avisos importantes das features da squad também chegam aqui.', action: false }]);
+        try { await mailQueue.sendNow(items); } catch (e) { return fail(res, 502, e.message); }
+        return json(res, 200, { ok: true, to: MAIL.to, email: mailStatus() });
+      }
+      const items = mailer.validateItems(body.items);
+      return json(res, 202, { ok: true, queued: mailQueue.add(items), delayMs: MAIL.delayMs });
     }
     // First start: the page creates the database with the workspace the person chose (from scratch, the example, a backup or the
     // browser's copy). Validated before anything is written; refused once a workspace exists.
@@ -691,8 +714,9 @@ function shutdown() {
   for (const run of runs.values()) { if (run.child) { run.cancelled = true; killTree(run.child); } flushRun(run); }
   try { fs.rmSync(TMP_DIR, { recursive: true, force: true }); } catch {}
   server.close();
-  // Runs still open are marked interrupted at the next start.
-  setTimeout(() => { try { store?.close(); } catch {} process.exit(0); }, 300).unref();
+  // Notices still waiting for their e-mail go out first (at most 8 s). Runs still open are marked interrupted at the next start.
+  const mailing = mailQueue.pending() ? Promise.race([mailQueue.flush(), new Promise(r => setTimeout(r, 8000).unref())]) : Promise.resolve();
+  mailing.then(() => setTimeout(() => { try { store?.close(); } catch {} process.exit(0); }, 300).unref());
 }
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
@@ -717,6 +741,7 @@ server.listen(PORT, HOST, () => {
   if (store) console.log(`Banco de dados: ${store.file}`);
   else console.log(`Banco de dados: nenhum em ${DATA_DIR}. Abra ${url} para criar um.`);
   if (store?.interrupted) console.log(`${store.interrupted} execução(ões) interrompida(s) na última sessão marcada(s) no histórico.`);
+  console.log(MAIL.configured ? `Notificações por e-mail: ${MAIL.user} → ${MAIL.to} (${MAIL.host}:${MAIL.port})` : `Notificações por e-mail desligadas. ${MAIL.error}`);
   if (process.env.SQUAD_PRINT_TOKEN) console.log(`TOKEN=${TOKEN}`);
   claudeVersion(DEFAULT_BIN).then(info => {
     if (info.version) console.log(`Claude Code ${info.version} (${info.resolved})`);
