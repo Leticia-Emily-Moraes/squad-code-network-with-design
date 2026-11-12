@@ -65,6 +65,16 @@ const PERMISSION_MODES = ['acceptEdits', 'auto', 'bypassPermissions', 'manual', 
 const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
 const TOOL_RE = /^[A-Za-z][A-Za-z0-9_]*(\([^()\r\n"]{0,200}\))?$|^mcp__[A-Za-z0-9_-]+(__[A-Za-z0-9_*-]+)?$/;
 const MODEL_RE = /^[A-Za-z0-9._\-\[\]]{1,80}$/;
+// MCP servers of a run (--mcp-config). The key is the prefix of every tool the server publishes (mcp__<key>__<tool>).
+const MCP_KEY_RE = /^[a-z0-9][a-z0-9_-]{0,47}$/;
+const MCP_TYPES = ['http', 'sse', 'stdio'];
+const MAX_MCP = 10;
+// Servers the bridge ships (scripts/): the page asks for them by name, so it never supplies their command, and their secret is a
+// reference to the bridge's own environment, expanded by Claude Code (${VAR:-}, empty when unset) instead of written to the temp file.
+const BUILTIN_MCP_FILES = { 'figma-api': 'figma-mcp.mjs' };
+const BUILTIN_MCP = {
+  'figma-api': () => ({ type: 'stdio', command: process.execPath, args: [path.join(ROOT, 'scripts', BUILTIN_MCP_FILES['figma-api'])], env: { FIGMA_TOKEN: '${FIGMA_TOKEN:-}' } }),
+};
 const MAX_EVENTS = 5000;
 const MAX_BODY = 2 * 1024 * 1024;
 
@@ -264,8 +274,63 @@ function validateRunOptions(o = {}) {
   out.partial = o.partial === true;
   // Squad colleagues the agent may call with the Agent tool (--agents file) and their text in the stream (--forward-subagent-text).
   out.agents = validateAgents(o.agents);
+  // MCP servers reach the tools through --mcp-config; --strict-mcp-config keeps the person's own servers out of squad runs.
+  out.mcpServers = validateMcpServers(o.mcpServers);
   out.forwardSubagents = o.forwardSubagents === true;
   const timeout = Number(o.timeoutSec); out.timeoutSec = Number.isFinite(timeout) && timeout >= 10 && timeout <= 7200 ? timeout : 900;
+  return out;
+}
+
+/** MCP servers written to the run's --mcp-config file. Whitelisted shapes only (URL or local command). null = none. */
+function validateMcpServers(value) {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== 'object' || Array.isArray(value)) throw new Error('Servidores MCP inválidos.');
+  const entries = Object.entries(value);
+  if (!entries.length) return null;
+  if (entries.length > MAX_MCP) throw new Error(`Até ${MAX_MCP} servidores MCP por execução.`);
+  const out = {};
+  // Claude Code expands ${VAR} in every field of the file: a value from the page must never reach the bridge's own environment.
+  const plain = (s, what) => { if (/\$\{/.test(s)) throw new Error(what); return s; };
+  const strings = (list, what) => {
+    if (!Array.isArray(list) || list.length > 30 || !list.every(x => typeof x === 'string' && x.length <= 500 && !/\$\{/.test(x))) throw new Error(what);
+    return list;
+  };
+  const record = (obj, what) => {
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) throw new Error(what);
+    const map = {};
+    for (const [k, v] of Object.entries(obj)) {
+      if (!/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(k) || typeof v !== 'string' || v.length > 2000 || /\$\{/.test(v)) throw new Error(what);
+      map[k] = v;
+    }
+    return map;
+  };
+  for (const [key, def] of entries) {
+    if (!MCP_KEY_RE.test(key)) throw new Error(`Identificador de servidor MCP inválido: ${String(key).slice(0, 60)}`);
+    if (!def || typeof def !== 'object' || Array.isArray(def)) throw new Error(`Definição inválida do servidor MCP ${key}.`);
+    if (def.builtin !== undefined) {
+      if (typeof def.builtin !== 'string' || !Object.hasOwn(BUILTIN_MCP, def.builtin)) throw new Error(`Servidor MCP embutido desconhecido: ${String(def.builtin).slice(0, 60)}`);
+      out[key] = BUILTIN_MCP[def.builtin]();
+      continue;
+    }
+    const type = def.type === undefined ? (def.command ? 'stdio' : 'http') : String(def.type);
+    if (!MCP_TYPES.includes(type)) throw new Error(`Transporte inválido do servidor MCP ${key}.`);
+    if (type === 'stdio') {
+      const command = typeof def.command === 'string' ? def.command.trim() : '';
+      if (!command || command.length > 500) throw new Error(`Comando inválido do servidor MCP ${key}.`);
+      plain(command, `Comando inválido do servidor MCP ${key}.`);
+      out[key] = { type, command };
+      if (def.args !== undefined) out[key].args = strings(def.args, `Argumentos inválidos do servidor MCP ${key}.`);
+      if (def.env !== undefined) out[key].env = record(def.env, `Variáveis de ambiente inválidas do servidor MCP ${key}.`);
+    } else {
+      let url;
+      plain(String(def.url || ''), `URL inválida do servidor MCP ${key}.`);
+      try { url = new URL(String(def.url || '')); } catch { throw new Error(`URL inválida do servidor MCP ${key}.`); }
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error(`URL inválida do servidor MCP ${key}: use http ou https.`);
+      out[key] = { type, url: url.href };
+      if (def.headers !== undefined) out[key].headers = record(def.headers, `Cabeçalhos inválidos do servidor MCP ${key}.`);
+    }
+  }
+  if (JSON.stringify(out).length > 100000) throw new Error('Definição dos servidores MCP muito grande.');
   return out;
 }
 
@@ -294,6 +359,17 @@ function validateAgents(value) {
   return entries.length ? out : null;
 }
 
+const AGENTS_ARG_MAX = process.platform === 'win32' ? 30000 : 120000;
+function agentsArg(agents) {
+  let json = JSON.stringify(agents);
+  if (json.length <= AGENTS_ARG_MAX) return json;
+  const keys = Object.keys(agents), total = keys.reduce((n, k) => n + agents[k].prompt.length, 0), over = json.length - AGENTS_ARG_MAX;
+  const keep = Math.max(500, Math.floor(total - over * 1.3) / keys.length);
+  const cut = {};
+  for (const k of keys) cut[k] = { ...agents[k], prompt: agents[k].prompt.slice(0, keep) };
+  return JSON.stringify(cut);
+}
+
 async function startRun(body) {
   const prompt = typeof body.prompt === 'string' ? body.prompt : '';
   if (!prompt.trim()) throw new Error('Prompt vazio.');
@@ -306,10 +382,10 @@ async function startRun(body) {
   if (opts.projectRun) await ensureProjectRepo(opts.cwd);
 
   const id = crypto.randomUUID();
-  const args = ['-p', '--output-format', 'stream-json', '--verbose', '--permission-prompts', 'none'];
-  let sysFile = null, settingsFile = null, agentsFile = null;
+  const args = ['-p', '--output-format', 'stream-json', '--verbose'];
+  let sysFile = null, settingsFile = null, agentsJson = null, mcpFile = null;
   // OS temp cleanup can remove the (usually empty) folder while the bridge keeps running.
-  if (systemPrompt.trim() || opts.projectRun || opts.agents) await fsp.mkdir(TMP_DIR, { recursive: true });
+  if (systemPrompt.trim() || opts.projectRun || opts.agents || opts.mcpServers) await fsp.mkdir(TMP_DIR, { recursive: true });
   if (systemPrompt.trim()) {
     sysFile = path.join(TMP_DIR, `${id}.system.md`);
     await fsp.writeFile(sysFile, systemPrompt, 'utf8');
@@ -319,17 +395,25 @@ async function startRun(body) {
     settingsFile = path.join(TMP_DIR, `${id}.settings.json`);
     // The file tools also refuse reads outside the project folder (and --add-dir), so agents never take this app or the
     // person's other folders for the project.
-    await fsp.writeFile(settingsFile, JSON.stringify({ claudeMdExcludes: APP_MEMORY_EXCLUDES, permissions: { blockReadsOutsideWorkingDirectories: true } }), 'utf8');
+    await fsp.writeFile(settingsFile, JSON.stringify({ claudeMdExcludes: APP_MEMORY_EXCLUDES, permissions: { blockReadsOutsideWorkingDirectories: true }, includeCoAuthoredBy: false, attribution: { commit: '', pr: '' } }), 'utf8');
     args.push('--settings', settingsFile);
   }
   if (opts.agents) {
-    agentsFile = path.join(TMP_DIR, `${id}.agents.json`);
-    await fsp.writeFile(agentsFile, JSON.stringify(opts.agents), 'utf8');
-    args.push('--agents', agentsFile);
+    // The CLI takes --agents as inline JSON (a file path is read as no agents at all, and every colleague call fails with
+    // "Agent type not found"). One argument has a size limit (128 KB on Linux, 32 KB on Windows), so long prompts are cut to fit.
+    agentsJson = agentsArg(opts.agents);
+    args.push('--agents', agentsJson);
+  }
+  if (opts.mcpServers) {
+    mcpFile = path.join(TMP_DIR, `${id}.mcp.json`);
+    await fsp.writeFile(mcpFile, JSON.stringify({ mcpServers: opts.mcpServers }), 'utf8');
+    // --strict-mcp-config: only these servers, never the ones configured in the person's own Claude Code.
+    args.push('--mcp-config', mcpFile, '--strict-mcp-config');
   }
   if (opts.forwardSubagents) args.push('--forward-subagent-text');
   if (opts.model) args.push('--model', opts.model);
-  if (opts.permissionMode) args.push('--permission-mode', opts.permissionMode);
+  // Headless has nobody to approve a prompt: without a mode from the page, dontAsk denies what would need one.
+  args.push('--permission-mode', opts.permissionMode || 'dontAsk');
   if (opts.effort) args.push('--effort', opts.effort);
   if (opts.maxBudgetUsd) args.push('--max-budget-usd', opts.maxBudgetUsd);
   if (opts.tools) args.push('--tools', opts.tools.length ? opts.tools.join(',') : '');
@@ -347,8 +431,8 @@ async function startRun(body) {
   });
   const run = {
     id, status: 'running', startedAt: new Date().toISOString(), endedAt: null, label: String(body.label || '').slice(0, 200),
-    cwd: opts.cwd, args: args.map(a => a === sysFile ? '<system-prompt-file>' : a === settingsFile ? '<settings-file>' : a === agentsFile ? '<agents-file>' : a), child, events: [], clients: new Set(),
-    result: null, sysFile, settingsFile, agentsFile, timer: null, cancelled: false,
+    cwd: opts.cwd, args: args.map(a => a === sysFile ? '<system-prompt-file>' : a === settingsFile ? '<settings-file>' : a === agentsJson ? '<agents-json>' : a === mcpFile ? '<mcp-file>' : a), child, events: [], clients: new Set(),
+    result: null, sysFile, settingsFile, mcpFile, timer: null, cancelled: false,
     // History: who ran it and where (body.meta, whitelisted in db.js), saved events count and the batch waiting to be written.
     // Without a database yet (direct API use before the setup), the run still works but stays out of the history.
     meta: dbModule.runMeta(body.meta), project: typeof body.options?.project === 'string' ? body.options.project.slice(0, 80) : '', persist: !!store, saved: 0, pending: [], flushTimer: null,
@@ -394,7 +478,7 @@ async function startRun(body) {
     if (run.persist) try { store.finishRun(run, exit); } catch (e) { console.warn(`Histórico da execução ${id} não finalizado: ${e.message}`); }
     for (const res of run.clients) res.end();
     run.clients.clear();
-    for (const file of [run.sysFile, run.settingsFile, run.agentsFile]) if (file) fsp.rm(file, { force: true }).catch(() => {});
+    for (const file of [run.sysFile, run.settingsFile, run.mcpFile]) if (file) fsp.rm(file, { force: true }).catch(() => {});
     run.child = null;
     // Keep finished runs for 30 minutes so late subscribers can replay.
     setTimeout(() => runs.delete(id), 30 * 60 * 1000).unref();
@@ -493,10 +577,17 @@ async function handle(req, res) {
     if (req.method === 'GET' && url.pathname === '/api/health') {
       const bin = url.searchParams.get('claudePath') || DEFAULT_BIN;
       const info = await claudeVersion(bin);
-      return json(res, 200, { ok: true, bridge: 'squad-code', claudeVersion: info.version, claudePath: info.resolved, claudeError: info.error, defaultCwd: process.cwd(), projectsDir: longPath(PROJECTS_DIR), home: HOME, platform: process.platform, activeRuns: activeCount(), maxConcurrent, dbReady: !setupNeeded(), dbPath: store?.file || DB_FILE });
+      return json(res, 200, { ok: true, bridge: 'squad-code', claudeVersion: info.version, claudePath: info.resolved, claudeError: info.error, defaultCwd: process.cwd(), projectsDir: longPath(PROJECTS_DIR), home: HOME, platform: process.platform, activeRuns: activeCount(), maxConcurrent, dbReady: !setupNeeded(), dbPath: store?.file || DB_FILE, figmaToken: Boolean(process.env.FIGMA_TOKEN) });
     }
     // First start: the page creates the database with the workspace the person chose (from scratch, the example, a backup or the
     // browser's copy). Validated before anything is written; refused once a workspace exists.
+    // The code of a built-in MCP server, so the export can ship it with the project (the page has no copy of it).
+    const builtinSource = url.pathname.match(/^\/api\/mcp\/([a-z0-9-]+)\/source$/);
+    if (req.method === 'GET' && builtinSource) {
+      const file = Object.hasOwn(BUILTIN_MCP_FILES, builtinSource[1]) ? BUILTIN_MCP_FILES[builtinSource[1]] : '';
+      if (!file) return fail(res, 404, 'Servidor MCP embutido não encontrado.');
+      return json(res, 200, { ok: true, file, source: await fsp.readFile(path.join(ROOT, 'scripts', file), 'utf8') });
+    }
     if (req.method === 'POST' && url.pathname === '/api/setup') {
       const body = await readBody(req, MAX_WORKSPACE);
       if (!setupNeeded()) return json(res, 409, { ok: false, conflict: true, path: store.file, error: 'Já existe um banco de dados com um workspace. Recarregue a página.' });

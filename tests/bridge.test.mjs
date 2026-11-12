@@ -126,7 +126,7 @@ test('squad colleagues go to claude as an --agents file, with forwarded subagent
   const res = await api('/api/runs', { method: 'POST', body: JSON.stringify({ prompt: 'implement', options: { cwd: workdir, agents, forwardSubagents: true, tools: ['Read', 'Agent'] } }) });
   assert.equal(res.status, 201, await res.clone().text());
   const { runId, args } = await res.json();
-  assert.equal(args[args.indexOf('--agents') + 1], '<agents-file>');
+  assert.equal(args[args.indexOf('--agents') + 1], '<agents-json>');
   assert.ok(args.includes('--forward-subagent-text'));
   const events = await collect(runId);
   const init = events.find(e => e.type === 'system' && e.subtype === 'init');
@@ -518,4 +518,91 @@ test('chats are saved per kind, capped and swept when their feature is gone', as
   assert.equal((await api('/api/chats/agent/a1', { method: 'DELETE' })).status, 200);
   chats = pageTag(await page(), 'squad-memory').chats;
   assert.equal(chats.agent.a1, undefined);
+});
+
+test('MCP servers reach the run as --mcp-config, with --strict-mcp-config, and invalid ones are refused', async () => {
+  const mcpServers = {
+    'figma-desktop': { type: 'http', url: 'http://127.0.0.1:3845/mcp' },
+    local: { command: 'node', args: ['server.mjs'], env: { TOKEN: 'x' } },
+  };
+  let res = await api('/api/runs', { method: 'POST', body: JSON.stringify({ prompt: 'hello', options: { cwd: workdir, mcpServers, allowedTools: ['mcp__figma-desktop'] } }) });
+  assert.equal(res.status, 201);
+  const { runId, args } = await res.json();
+  // The file is a temp file, masked in the response, and --strict-mcp-config keeps the person's own servers out.
+  assert.ok(args.includes('--mcp-config'));
+  assert.equal(args[args.indexOf('--mcp-config') + 1], '<mcp-file>');
+  assert.ok(args.includes('--strict-mcp-config'));
+  assert.ok(args.includes('--allowedTools'));
+  assert.equal(args[args.indexOf('--allowedTools') + 1], 'mcp__figma-desktop');
+  const init = (await collect(runId)).find(e => e.subtype === 'init');
+  // The bridge normalizes: the transport is spelled out, so the file says exactly what Claude Code will load.
+  assert.deepEqual(init.mcp, { mcpServers: {
+    'figma-desktop': { type: 'http', url: 'http://127.0.0.1:3845/mcp' },
+    local: { type: 'stdio', command: 'node', args: ['server.mjs'], env: { TOKEN: 'x' } },
+  } });
+  assert.equal(init.strictMcp, true);
+
+  // No servers: no flag at all.
+  res = await api('/api/runs', { method: 'POST', body: JSON.stringify({ prompt: 'hello', options: { cwd: workdir } }) });
+  assert.ok(!(await res.json()).args.includes('--mcp-config'));
+
+  for (const bad of [
+    { k: { url: 'file:///etc/passwd' } },
+    { k: { type: 'ws', url: 'http://127.0.0.1/mcp' } },
+    { k: { command: '' } },
+    { 'Bad Key': { url: 'http://127.0.0.1/mcp' } },
+    { k: { url: 'http://127.0.0.1/mcp', headers: { 'x': 1 } } },
+  ]) {
+    const r = await api('/api/runs', { method: 'POST', body: JSON.stringify({ prompt: 'hello', options: { cwd: workdir, mcpServers: bad } }) });
+    assert.equal(r.status, 400, JSON.stringify(bad));
+  }
+});
+
+test('built-in MCP server: the bridge supplies the command, the token stays a reference, and ${} from the page is refused', async () => {
+  const run = mcpServers => api('/api/runs', { method: 'POST', body: JSON.stringify({ prompt: 'hello', options: { cwd: workdir, mcpServers } }) });
+  const res = await run({ 'figma-api': { builtin: 'figma-api' } });
+  assert.equal(res.status, 201);
+  const init = (await collect((await res.json()).runId)).find(e => e.subtype === 'init');
+  const entry = init.mcp.mcpServers['figma-api'];
+  assert.equal(entry.type, 'stdio');
+  assert.equal(entry.command, process.execPath);
+  assert.equal(entry.args[0], path.join(ROOT, 'scripts', 'figma-mcp.mjs'));
+  assert.ok(existsSync(entry.args[0]));
+  // The file holds a reference, never the value: Claude Code expands it from the bridge's own environment (empty when unset).
+  assert.deepEqual(entry.env, { FIGMA_TOKEN: '${FIGMA_TOKEN:-}' });
+
+  // The page cannot ask for a server the bridge does not ship, nor smuggle references to the bridge's environment.
+  for (const bad of [
+    { k: { builtin: 'nope' } },
+    { k: { command: 'node', env: { X: '${ANTHROPIC_API_KEY}' } } },
+    { k: { command: 'node', args: ['${HOME}'] } },
+    { k: { command: '${HOME}/x' } },
+    { k: { url: 'http://127.0.0.1/${ANTHROPIC_API_KEY}' } },
+    { k: { url: 'http://127.0.0.1/mcp', headers: { Authorization: 'Bearer ${ANTHROPIC_API_KEY}' } } },
+  ]) assert.equal((await run(bad)).status, 400, JSON.stringify(bad));
+
+  assert.equal(typeof (await (await api('/api/health')).json()).figmaToken, 'boolean');
+});
+
+test('built-in MCP server source is served for the export, only with the token, and only for known names', async () => {
+  const res = await api('/api/mcp/figma-api/source');
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.file, 'figma-mcp.mjs');
+  assert.equal(body.source, readFileSync(path.join(ROOT, 'scripts', 'figma-mcp.mjs'), 'utf8'));
+  assert.equal((await api('/api/mcp/nope/source')).status, 404);
+  assert.equal((await api('/api/mcp/__proto__/source')).status, 404);
+  assert.notEqual((await fetch(`${BASE}/api/mcp/figma-api/source`)).status, 200);
+});
+
+test('MCP tools can be allowed one by one: mcp__<server>__<tool> reaches --allowedTools and malformed names are refused', async () => {
+  const allowed = ['Read', 'mcp__figma-remote__whoami', 'mcp__figma-remote__use_figma', 'mcp__figma-api'];
+  const res = await api('/api/runs', { method: 'POST', body: JSON.stringify({ prompt: 'hello', options: { cwd: workdir, allowedTools: allowed } }) });
+  assert.equal(res.status, 201);
+  const { args } = await res.json();
+  assert.equal(args[args.indexOf('--allowedTools') + 1], allowed.join(','));
+  for (const bad of ['mcp__figma remote__x', 'mcp__figma-remote__a b', 'mcp__figma-remote__x(y)']) {
+    const r = await api('/api/runs', { method: 'POST', body: JSON.stringify({ prompt: 'hello', options: { cwd: workdir, allowedTools: [bad] } }) });
+    assert.equal(r.status, 400, bad);
+  }
 });

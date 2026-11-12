@@ -15,7 +15,7 @@ npm install                 # better-sqlite3 (prebuilt binary; Node >= 22)
 npm run dev                 # build index.html from src/, start the bridge, rebuild on src/ changes, restart on server.js / db.js changes
 npm start                   # node server.js → http://127.0.0.1:4317 (--port N or SQUAD_PORT; SQUAD_CLAUDE_BIN for another claude; SQUAD_PROJECTS_DIR for another projects root; SQUAD_DATA_DIR for another database folder)
 python build.py [--copy]    # full build: regenerates src/avatars.js (needs Pillow), writes index.html (--copy: also ../squad-code-network.html)
-npm test                    # bridge tests: node --test tests/bridge.test.mjs (uses tests/fake-claude.mjs, no API cost)
+npm test                    # bridge tests + the Figma MCP server's: node --test tests/bridge.test.mjs tests/figma-mcp.test.mjs (tests/fake-claude.mjs and a fake Figma API, no API cost)
 node --test --test-name-pattern "<test name>" tests/bridge.test.mjs   # single bridge test
 node --check src/app.js     # quick syntax check after edits
 python tests/ui_test.py     # optional UI tests (needs Playwright + Chromium; CHROMIUM_EXECUTABLE, SQUAD_PREVIEW_DIR)
@@ -50,7 +50,7 @@ order**, into one classic `<script>`: `portraits.js`, `avatars.js`, `conventions
 
 **`server.js` (bridge) + `db.js` (SQLite).** Serves `index.html` (injecting a per-start random token), binds to
 127.0.0.1 only, and every `/api` call needs the token plus local Host/Origin. `/api/runs` spawns
-`claude -p --output-format stream-json --verbose --permission-prompts none`, writes the agent's system
+`claude -p --output-format stream-json --verbose --permission-mode <mode>` (`dontAsk` without one), writes the agent's system
 prompt to a temp file passed as `--append-system-prompt-file`, sends the step prompt via **stdin**
 (never shell-interpolated), and streams events back. Options (permission mode, effort, tools, model,
 dirs, budget, `partial` → `--include-partial-messages`) are whitelisted. Limits: body 2 MB, prompt 400k chars, system prompt 100k (silently
@@ -97,6 +97,18 @@ Squad colleagues: the `agents` option (whitelisted CLI subagent fields: `descrip
 to a temp file passed as `--agents <file>`, and `forwardSubagents:true` adds `--forward-subagent-text`. Runs with agents get
 `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1`, so an `Agent` tool call runs in the foreground and its tool_result is the colleague's
 report (framed as "[Subagent hand-back] ... The report follows:" with indented lines; `subagentReport` unwraps it).
+MCP servers: the `mcpServers` option (`validateMcpServers`: `http`/`sse` by URL, `stdio` by command, or `{builtin:'<name>'}` for
+`BUILTIN_MCP`) is written to a temp `--mcp-config` file with `--strict-mcp-config`, so squad runs never inherit the person's own MCP
+servers; the temp file is masked as `<mcp-file>` and removed with the others. Claude Code expands `${VAR}` in every field of that
+file, so nothing coming from the page may contain `${` (refused). `BUILTIN_MCP` servers ship in `scripts/` and the bridge supplies
+their command: `figma-api` (`scripts/figma-mcp.mjs`: read-only, no dependencies, Figma REST with a personal token, works on every
+plan without Dev Mode) gets `FIGMA_TOKEN: '${FIGMA_TOKEN:-}'`, so the token comes from the environment the bridge was started in
+and is never in the workspace or in the temp file. The `:-` matters (checked against the real `claude`): without it an unset
+variable reaches the server as the literal text. The server only issues GET requests, answers tool errors as `isError` text
+(never the token) and refuses a `FIGMA_API_BASE` that is not loopback (tests only). `/api/health` reports `figmaToken`. `GET /api/mcp/<name>/source` hands over the
+code of a built-in server (`BUILTIN_MCP_FILES`) so the export can ship it. The server caches JSON answers on disk for 5 minutes
+(`FIGMA_CACHE_TTL_S`, `FIGMA_CACHE_DIR`; key = sha256 of token + URL, private folder; errors and `figma_whoami` are never cached;
+every tool takes `fresh`).
 
 **`src/app.js` (state, UI, orchestration).**
 - One persisted `state` object (localStorage key `squad-code.network.v2`, export/import as JSON). Served by the bridge, the database
@@ -240,7 +252,26 @@ report (framed as "[Subagent hand-back] ... The report follows:" with indented l
   `backlog`. The DIRETRIZES catalog paths (ADR/PRD/C4) follow the same `docs/` layout.
 - Features carry `route` (ordered agent ids) built by `routeFor`, which maps scopes to roles with
   `ROLE_FAMILY` (e.g. node/java/dotnet cover the backend step). A finished route sends the feature to
-  human review; only approval marks it done and unblocks dependents.
+  human review; only approval marks it done and unblocks dependents. `designer` is a route role the squad may lack
+  (`ROUTE_OPTIONAL`, `routeOptional`): it goes before the interface step in the frontend, fullstack and mobile scopes only when the
+  squad has one (never reported as missing); scope `designer` is po > designer > qa, with the designer required.
+- MCP per agent: `a.mcp` holds keys of `MCP_SERVERS` (persisted in `normalizeWorkspace`, `presetDefaults`); `runOptionsFor` sends
+  `mcpServers` and allows `mcp__<key>` (the whole server, by prefix), `claudeArgs` mirrors the flags, `CHAT_RUN` clears them (a chat
+  turn has no tools). The studio's FERRAMENTAS tab shows `mcpFieldHTML`, with a warning when the bridge has no `FIGMA_TOKEN`. `exportProject` (async) asks the bridge for the code of the built-in servers the squad uses and passes it as `have`
+  to `projectExportFiles`: with it the package carries `.claude/mcp/<file>`, `.mcp.json` (relative path, `MCP_SERVERS[k].export`) and the
+  `mcp__` tools in the agents' frontmatter; without it (demo) built-in servers stay out and CLAUDE.md says so. The catalog design agents
+  (PRISM, CANVAS, MOSAIC) come with `figma-api`; `migrateCatalogAgents` v3 (`catalogVersion` 3) adds it once to existing ones that have
+  none or only the old `figma-desktop` default, never swapping a choice. `project.figmaUrl` (persisted; `figmaLink` accepts only
+  figma.com design/file links) is in the operation form, in `buildStepPrompt` (`figmaStepBlock`, only for agents with a Figma server) and
+  in the exported `docs/project/briefing.md`; `agentSystemPrompt(a,{figma:true})` appends `FIGMA_GUIDE` (live steps, command preview and
+  exports that carry the server; never chats or colleagues). A server with a `tools` list (`figma-remote`, the official one, logged in once with `claude mcp login figma-remote`) is allowed
+  tool by tool: `tools.read` always, `tools.write` only when `a.mcpWrite` has its key (a studio switch, persisted in
+  `normalizeWorkspace`), and anything the server adds later stays denied; `figmaGuides` gives it the official workflow and, with write
+  on, the rules (own files only, because the server cannot scope an agent to one file: `create_session` says so itself). The catalog designers
+  (PRISM, CANVAS, MOSAIC) also come with `figma-remote` and writing on (`catalogVersion` 4 migrates the ones still on `figma-api` alone).
+  `project.figmaFolder` (persisted, `figmaFolderLink`/`figmaFolderIds`: a figma.com/files/.../folder/<id> (or project/<id>) link, pre-filled from the
+  last operation that has one) tells a writing designer where to `create_new_file` (`projectId`, and `planKey` team::<id> when the link
+  has the team): one draft per operation. A new server is one `MCP_SERVERS` entry.
 - Agents: `ROLES` defines specialties; Squad Studio presets come from `AGENT_PRESETS` and
   `OP_CATEGORIES` (operators picked by category → sub-specialty, generalist first) and are
   materialized by `createPresetAgent`. Each agent has `model` (catalog `CLAUDE_MODELS`: aliases, pinned IDs, `inherit`;

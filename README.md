@@ -249,6 +249,7 @@ A lista completa está no [guia](docs/GUIA.md#-controles).
 | `SQUAD_CLAUDE_BIN` | `claude` | Executável do Claude Code (nome no `PATH` ou caminho completo) |
 | `SQUAD_PROJECTS_DIR` | `./projects` | Raiz das pastas de trabalho dos agentes |
 | `SQUAD_DATA_DIR` | `./data` | Pasta do banco SQLite (`squad.db`) |
+| `FIGMA_TOKEN` | (vazio) | Token pessoal do Figma, só para os agentes de design (veja abaixo). Gere em Figma > Settings > Security > Personal access tokens |
 
 Exemplos:
 
@@ -289,6 +290,72 @@ no modo headless ninguém aprova, então são recusadas. Duas configurações ab
 (`permissions.blockReadsOutsideWorkingDirectories`), então os agentes não confundem o projeto com o código do SQUAD/CODE
 nem com outras pastas suas. Comandos de terminal (`Bash`), quando liberados para um agente, não são isolados pelo Claude
 Code no Windows; nesse caso vale a instrução do prompt.
+
+### Agentes de design e o Figma
+
+O designer (PRISM, CANVAS e MOSAIC, categoria Design no Squad Studio) entra na rota das features de frontend, fullstack e mobile, antes de quem
+implementa a interface, e entrega a especificação (fluxo, telas, componentes, estados e acessibilidade) em `docs/design/`. A rota não muda em
+squads sem designer, e o escopo **Design / UX** (PO, designer, QA) existe para features só de design.
+
+O PRISM, o CANVAS e o MOSAIC leem o Figma pelo servidor MCP embutido `scripts/figma-mcp.mjs` (somente leitura: estrutura das telas, textos, cores,
+espaçamentos, componentes e estilos, e exportação de SVG). Ele usa um token pessoal da API REST, então funciona em qualquer plano, inclusive o
+gratuito, e não depende do Dev Mode:
+
+1. Em Figma > Settings > Security > Personal access tokens, gere um token com os escopos de leitura.
+2. Exporte `FIGMA_TOKEN` no terminal em que você inicia o bridge e reinicie-o:
+
+```sh
+export FIGMA_TOKEN='...'   # macOS / Linux / Git Bash
+npm start
+```
+
+```powershell
+$env:FIGMA_TOKEN = "..."; npm start   # Windows PowerShell
+```
+
+O token fica só no ambiente do bridge: não vai para o workspace, para o banco nem para o arquivo de configuração temporário da execução.
+Cada execução recebe apenas os servidores MCP marcados no agente (aba Ferramentas do estúdio), nunca os que você configurou no seu Claude Code.
+Se o bridge estiver sem `FIGMA_TOKEN`, o estúdio avisa, e as ferramentas do Figma respondem com um erro explicando o que fazer.
+
+O link do arquivo vai no campo **Arquivo do Figma** do briefing da operação: o designer recebe o link no prompt de cada etapa, e ele vai
+também para o `docs/project/briefing.md` exportado. As respostas do Figma ficam em cache por 5 minutos numa pasta temporária só sua, para o
+mesmo arquivo não gastar duas requisições do seu limite; o agente pede dados novos com `fresh: true` depois de uma mudança no arquivo.
+
+Ao exportar a operação com o bridge ligado, o servidor vai junto em `.claude/mcp/` (com o `.mcp.json`), então o repositório exportado também
+lê o Figma: exporte `FIGMA_TOKEN` e aprove o servidor do projeto na primeira vez que abrir o Claude Code. Exportando pelo `index.html` (demo),
+o servidor não vai, e o `CLAUDE.md` exportado avisa.
+
+### Conectar o MCP oficial do Figma (criar e editar designs)
+
+O servidor `figma-api` só lê. Para o agente de design **criar um projeto novo no Figma e editá-lo**, é preciso o servidor MCP oficial da Figma,
+porque a API REST não cria arquivos nem edita nós. Ele exige assento **Full** (as fontes de terceiros dizem isso; confira com o `whoami` da
+sua conta depois que o plano Education for aprovado) e um login OAuth, que a execução do bridge não consegue fazer sozinha. Por isso o login é feito
+uma vez no terminal:
+
+```sh
+claude mcp add --transport http figma-remote https://mcp.figma.com/mcp
+claude mcp login figma-remote     # abre o navegador (use --no-browser por SSH)
+claude mcp list                   # deve mostrar figma-remote conectado; não chama o modelo, não custa nada
+```
+
+Use exatamente o nome `figma-remote`: o login é guardado por servidor, e a execução do bridge usa esse mesmo nome e endereço. Em seguida,
+no estúdio do agente (aba Ferramentas > Servidores MCP), marque **Figma oficial (nuvem)** e, para criar e editar, **Permitir criar e editar
+designs**. Sem essa segunda caixa o agente só lê (`create_session`, `get_design_context`, `get_screenshot` e as demais de leitura).
+
+Os designers do catálogo (PRISM, CANVAS e MOSAIC) já vêm com as duas opções ligadas. Para o designer criar um draft por operação numa pasta sua,
+abra a pasta no Figma, copie o endereço (`https://www.figma.com/files/team/<id>/folder/<id>`) e cole no campo **Pasta do Figma para os
+designs novos** da operação; a operação seguinte já vem com o mesmo link. Sem o campo, o arquivo novo cai nos rascunhos da conta. O designer
+edita livremente o arquivo que criou, mas não mexe nos outros arquivos da conta.
+
+Para conferir o caminho completo (o mesmo que o bridge percorre, com uma chamada mínima ao modelo):
+
+```sh
+echo "Chame a ferramenta whoami do Figma e responda só com o nome da conta e o plano." | claude -p --model haiku --max-budget-usd 0.05 --strict-mcp-config --mcp-config '{"mcpServers":{"figma-remote":{"type":"http","url":"https://mcp.figma.com/mcp"}}}' --allowedTools mcp__figma-remote__whoami
+```
+
+Cuidado com a escrita: o servidor **não limita o agente a um arquivo**. Ele pode alterar qualquer arquivo da conta que fez o login, e a execução
+não tem ninguém para aprovar. O agente é instruído a mexer só no que criou e no arquivo do briefing, mas isso é uma instrução, não uma trava.
+A forma de garantir é usar uma conta do Figma só para o agente, com apenas o projeto dele.
 
 ### Dados do workspace
 
@@ -364,7 +431,7 @@ squad-code-network/
 │   ├── portraits.js    # retratos embutidos
 │   ├── avatars.js      # galeria gerada de assets/*.png
 │   └── vendor/         # three.min.js embutido
-├── scripts/            # dev runner, geração de avatares e vendor do Three.js
+├── scripts/            # dev runner, geração de avatares, vendor do Three.js e servidor MCP do Figma
 ├── assets/             # imagens fonte dos avatares
 ├── tests/              # testes do bridge (Claude falso) e de interface
 ├── docs/GUIA.md        # guia completo das funcionalidades

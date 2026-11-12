@@ -26,3 +26,6 @@ Thumbs.db
 
 # Workspace salvo pelo bridge (data/workspace.json, backups)
 data/
+
+# Histórico das conversas com o Claude
+HISTORICO.md
