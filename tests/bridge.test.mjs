@@ -483,6 +483,26 @@ test('run history survives a restart; a run cut by a dead bridge comes back inte
   await b.stop();
 });
 
+test('the plan limits (session and week) of the latest run reach health and the page, also after a restart', async () => {
+  const dir = tmp('squad-limits-'); extraDirs.push(dir);
+  let b = await startBridge(dir);
+  assert.equal(pageTag(await page(b.base), 'squad-memory').limits, null);
+  assert.equal((await b.api('/api/setup', { method: 'POST', body: JSON.stringify({ version: 2, agents: [], projects: [{ id: 'p1', name: 'Limites' }], squads: [] }) })).status, 201);
+  const res = await b.api('/api/runs', { method: 'POST', body: JSON.stringify({ prompt: 'LIMITS', options: { cwd: workdir }, meta: { projectId: 'p1', kind: 'chat' } }) });
+  const events = await collect((await res.json()).runId, b.base, b.token);
+  assert.ok(events.some(e => e.type === 'rate_limit_event'));
+  const want = { status: 'allowed', session: { used: 0.03, resetsAt: 4102444800, status: 'allowed' }, week: { used: 0.14, resetsAt: 4102963200, status: 'allowed' } };
+  const health = await (await b.api('/api/health')).json();
+  assert.deepEqual({ ...health.limits, at: undefined }, { ...want, at: undefined });
+  assert.ok(health.limits.at > 0);
+  await new Promise(r => setTimeout(r, 300)); // the events reach the database
+  await b.stop();
+  b = await startBridge(dir);
+  const tag = pageTag(await page(b.base), 'squad-memory').limits;
+  assert.deepEqual({ ...tag, at: undefined }, { ...want, at: undefined });
+  await b.stop();
+});
+
 test('operation room messages are saved incrementally, trimmed and handed to the page', async () => {
   const ws = { version: 2, agents: [{ id: 'a1', name: 'VANGUARD', role: 'commander' }], projects: [{ id: 'p1', name: 'Um', features: [{ id: 'f1', title: 'Login' }] }], squads: [] };
   assert.equal((await api('/api/workspace?force=1', { method: 'PUT', body: JSON.stringify(ws) })).status, 200);

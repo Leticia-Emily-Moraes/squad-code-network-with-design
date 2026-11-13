@@ -57,8 +57,11 @@ if (dbModule.driverError) { console.error(`SQUAD/CODE: ${dbModule.driverError}`)
 const nodeMajor = Number(process.versions.node.split('.')[0]);
 if (nodeMajor < 22) console.warn(`SQUAD/CODE pede o Node 22 ou mais novo (este é o ${process.version}). Atualize se algo falhar.`);
 let store = null;
+// The plan's usage (5-hour session and week) from the latest rate_limit_event of any run: /api/health and #squad-memory carry it.
+let planLimits = null;
 function openDb() {
   store = dbModule.openStore(DATA_DIR);
+  try { const l = store.lastLimits(); if (l && !(planLimits?.at > l.at)) planLimits = l; } catch {}
   if (store.migration?.imported) console.log(`Workspace migrado de data/workspace.json para ${store.file} (${store.migration.versions} versões antigas). Os arquivos JSON foram para ${path.join(DATA_DIR, 'legacy-json')}.`);
   if (store.migration?.warning) console.warn(store.migration.warning);
   if (store.migration?.error) console.warn(store.migration.error);
@@ -221,6 +224,7 @@ function killTree(child) {
 function activeCount() { return [...runs.values()].filter(r => r.status === 'running').length; }
 
 function pushEvent(run, event) {
+  if (event?.type === 'rate_limit_event') planLimits = dbModule.limitsOf(event.rate_limit_info) || planLimits;
   run.events.push(event);
   if (run.events.length > MAX_EVENTS) run.events.splice(0, run.events.length - MAX_EVENTS);
   const line = `data: ${JSON.stringify(event)}\n\n`;
@@ -552,9 +556,9 @@ function workspaceTag() {
 // Operation rooms (the last 200 messages of each project) and chats; orphans are swept first.
 // usage: tokens per operation/agent/feature/kind/day (GET /api/usage), so the page shows consumption without asking.
 function memoryTag() {
-  if (!store) return jsonTag('squad-memory', { rooms: {}, chats: {}, usage: [] });
-  try { store.sweep(); return jsonTag('squad-memory', { rooms: store.loadRooms(200), chats: store.loadChats(), usage: store.usageSummary() }); }
-  catch (e) { console.warn(`Sala e conversas não carregadas: ${e.message}`); return jsonTag('squad-memory', { rooms: {}, chats: {}, usage: [] }); }
+  if (!store) return jsonTag('squad-memory', { rooms: {}, chats: {}, usage: [], limits: planLimits });
+  try { store.sweep(); return jsonTag('squad-memory', { rooms: store.loadRooms(200), chats: store.loadChats(), usage: store.usageSummary(), limits: planLimits }); }
+  catch (e) { console.warn(`Sala e conversas não carregadas: ${e.message}`); return jsonTag('squad-memory', { rooms: {}, chats: {}, usage: [], limits: planLimits }); }
 }
 
 /* ---------- http ---------- */
@@ -589,7 +593,7 @@ async function handle(req, res) {
     if (req.method === 'GET' && url.pathname === '/api/health') {
       const bin = url.searchParams.get('claudePath') || DEFAULT_BIN;
       const info = await claudeVersion(bin);
-      return json(res, 200, { ok: true, bridge: 'squad-code', claudeVersion: info.version, claudePath: info.resolved, claudeError: info.error, defaultCwd: process.cwd(), projectsDir: longPath(PROJECTS_DIR), home: HOME, platform: process.platform, activeRuns: activeCount(), maxConcurrent, dbReady: !setupNeeded(), dbPath: store?.file || DB_FILE, figmaToken: Boolean(process.env.FIGMA_TOKEN), email: mailStatus() });
+      return json(res, 200, { ok: true, bridge: 'squad-code', claudeVersion: info.version, claudePath: info.resolved, claudeError: info.error, defaultCwd: process.cwd(), projectsDir: longPath(PROJECTS_DIR), home: HOME, platform: process.platform, activeRuns: activeCount(), maxConcurrent, dbReady: !setupNeeded(), dbPath: store?.file || DB_FILE, figmaToken: Boolean(process.env.FIGMA_TOKEN), email: mailStatus(), limits: planLimits });
     }
     // E-mail notifications: the page sends the notices, the bridge groups them (MAIL.delayMs) and sends them to the address of its
     // own environment. The page never chooses the recipient. /test sends at once and reports the SMTP error.

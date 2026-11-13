@@ -112,6 +112,20 @@ function usageOf(r) {
   const model = models.length ? Object.keys(r.modelUsage).sort((a, b) => tokN(r.modelUsage[b].outputTokens) - tokN(r.modelUsage[a].outputTokens))[0] : '';
   return { ...u, model: String(model || '').slice(0, 80) };
 }
+/** Plan limits of a claude -p rate_limit_event (subscription logins only): the 5-hour session and the 7-day week, each with the share
+    used (0..1, null when unknown) and when it resets (epoch seconds). `at` is when the bridge saw it (ms). Null when there is nothing. */
+function limitsOf(info, at = Date.now()) {
+  if (!isObj(info)) return null;
+  const pct = v => Number.isFinite(Number(v)) ? Math.min(Math.max(Number(v), 0), 1) : null;
+  const sec = v => Number.isFinite(Number(v)) && Number(v) > 0 ? Math.round(Number(v)) : null;
+  const st = v => typeof v === 'string' ? v.slice(0, 40) : '';
+  const win = w => isObj(w) && (pct(w.utilization) !== null || sec(w.resetsAt)) ? { used: pct(w.utilization), resetsAt: sec(w.resetsAt), status: st(w.status) } : null;
+  const u = isObj(info.unifiedWindows) ? info.unifiedWindows : {};
+  const pick = (key, type) => win(u[key]) || (info.rateLimitType === type ? win(info) : null);
+  const session = pick('five_hour', 'five_hour'), week = pick('seven_day', 'seven_day');
+  if (!session && !week) return null;
+  return { at: Number(at) || Date.now(), status: st(info.status), session, week };
+}
 function checkWorkspace(ws) {
   if (!isObj(ws) || ws.version !== 2 || !Array.isArray(ws.agents) || !Array.isArray(ws.projects) || !ws.projects.length) throw bad('Workspace inválido. Esperado um workspace SQUAD CODE v2.');
 }
@@ -210,6 +224,8 @@ function openStore(dataDir) {
     usagePrune: db.prepare(`DELETE FROM usage WHERE run_id NOT IN (SELECT run_id FROM usage ORDER BY at DESC LIMIT ${KEEP_USAGE})`),
     // One row per operation/agent/feature/kind/local day: the page sums what each place shows.
     usageSum: db.prepare("SELECT project_id AS p, agent_id AS a, feature_id AS f, kind AS k, date(at, 'localtime') AS d, count(*) AS n, sum(input) AS i, sum(output) AS o, sum(cache_read) AS cr, sum(cache_write) AS cw, round(sum(coalesce(cost_usd, 0)), 6) AS c FROM usage GROUP BY 1, 2, 3, 4, 5"),
+    // The plan limits the latest run reported (its start time stands in for when they were seen).
+    limitsLast: db.prepare("SELECT r.started_at AS at, e.data FROM run_events e JOIN runs r ON r.id = e.run_id WHERE e.type = 'rate_limit_event' ORDER BY r.started_at DESC, e.seq DESC LIMIT 1"),
     runPrune: db.prepare(`DELETE FROM runs WHERE status != 'running' AND id NOT IN (SELECT id FROM runs ORDER BY started_at DESC LIMIT ${KEEP_RUNS})`),
   };
   const ent = {};
@@ -405,6 +421,7 @@ function openStore(dataDir) {
     if (u) { q.usageAdd.run({ runId: r.id, at: r.startedAt, kind: r.meta.kind, projectId: r.meta.projectId, agentId: r.meta.agentId, featureId: r.meta.featureId, model: u.model || null, input: u.input, output: u.output, cacheRead: u.cacheRead, cacheWrite: u.cacheWrite, costUsd: exit.costUsd ?? null }); q.usagePrune.run(); }
   }
   const usageSummary = () => q.usageSum.all();
+  function lastLimits() { const r = q.limitsLast.get(); if (!r) return null; try { return limitsOf(JSON.parse(r.data).rate_limit_info, Date.parse(r.at)); } catch { return null; } }
   const summary = r => r && { id: r.id, status: r.status, label: r.label || '', kind: r.kind, project: r.project, projectId: r.project_id, agentId: r.agent_id, featureId: r.feature_id, cwd: r.cwd, startedAt: r.started_at, endedAt: r.ended_at, costUsd: r.cost_usd, durationMs: r.duration_ms, sessionId: r.session_id, events: r.events };
   function listRuns({ projectId = '', limit = 50 } = {}) {
     const n = Math.min(Math.max(Number(limit) || 50, 1), KEEP_RUNS);
@@ -435,10 +452,10 @@ function openStore(dataDir) {
     file, migration, interrupted, runMeta,
     syncWorkspace, readWorkspace, backupWorkspace, listSnapshots, getSnapshot,
     saveRoom, loadRooms, saveChat, deleteChat, loadChats, sweep,
-    insertRun, appendRunEvents, finishRun, listRuns, getRun, runEvents, usageSummary,
+    insertRun, appendRunEvents, finishRun, listRuns, getRun, runEvents, usageSummary, lastLimits,
     close: () => db.close(),
   };
 }
 
 // driverError: why better-sqlite3 did not load ('' when it did); the bridge checks it at start, before any database exists.
-module.exports = { openStore, hash, checkWorkspace, runMeta, usageOf, driverError };
+module.exports = { openStore, hash, checkWorkspace, runMeta, usageOf, limitsOf, driverError };
