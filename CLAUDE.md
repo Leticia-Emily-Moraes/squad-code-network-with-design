@@ -102,6 +102,14 @@ re-renders. Shown in the top bar (`#tokMeter`, `tokChrome`, click → `tokOpen`)
 `#chatTok`/`chatTokSync` in the three headers), the operation chat (`#roomTok`/`roomTokHTML`, `tokens` on baton and plan messages), the
 Painel (`homeUsageHTML`, project cards, run and review cards), the Squad map (roster, squad head, profile) and Handoffs (`handoffTokHTML`).
 Feature outputs and handoffs persist their step's `tokens` (`normTok`, in `normalizeWorkspace`). Demo runs spend none.
+Plan limits (subscription logins, the numbers of Claude Code's `/usage`): `claude -p` streams a `rate_limit_event` whose
+`unifiedWindows.five_hour`/`seven_day` carry `utilization` (0..1) and `resetsAt` (epoch s). `pushEvent` keeps the latest as `planLimits`
+(`limitsOf` in db.js: `{at, status, session, week}`, each `{used, resetsAt, status}`), seeded at `openDb` from the newest stored event
+(`lastLimits`); it goes in `/api/health` and `#squad-memory.limits`. The page (`ui.limits`, `normLimits`, `limitsFromInfo` for live
+events in `streamRun`, `limitsSet` keeps the newest `at`) shows SESSÃO/SEMANA in `#tokMeter` instead of today's tokens (still in its
+title; `5H`/`7D` at ≤1500px) and two cards on the Painel (`limitsPanelHTML`, `#homeLimits`); `limitsPaint` repaints every minute, and a
+window past its reset shows no number until the next run. API key logins get no event, so nothing changes. The fake claude sends one
+when the prompt has `LIMITS`.
 Squad colleagues: the `agents` option (whitelisted CLI subagent fields: `description`, `prompt`, `tools`, `model`, `effort`) is written
 to a temp file passed as `--agents <file>`, and `forwardSubagents:true` adds `--forward-subagent-text`. Runs with agents get
 `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1`, so an `Agent` tool call runs in the foreground and its tool_result is the colleague's

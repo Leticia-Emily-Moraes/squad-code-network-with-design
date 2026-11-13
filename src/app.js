@@ -556,7 +556,7 @@ if(bootMemory?.chats){ui.featureChats=bootMemory.chats.feature||{};ui.agentChats
    holds those rows plus this page's runs as they end (usageAdd, from streamRun) and ui.tokLive the runs still going (assistant
    messages). Shown in every chat (each reply and the conversation), the top bar (#tokMeter), the Painel, the Squad map, the operation
    chat and Handoffs. Demo runs spend nothing and show no tokens. Messages, outputs and handoffs keep their own run's tokens (normTok). */
-ui.usage=Array.isArray(bootMemory?.usage)?bootMemory.usage.map(tokRow).filter(Boolean):[];ui.tokLive=new Map();
+ui.usage=Array.isArray(bootMemory?.usage)?bootMemory.usage.map(tokRow).filter(Boolean):[];ui.tokLive=new Map();ui.limits=normLimits(bootMemory?.limits);
 const TOK_KIND={step:'Etapas da rota',spawn:'Agente avulso',plan:'Planos do comandante',chat:'Conversas com agentes',cowrite:'Co-escrita de features',doc:'Agent Teams'};
 function tokRow(r){if(!r||typeof r!=='object')return null;const n=v=>Number.isFinite(+v)&&+v>0?+v:0;return{p:r.p||null,a:r.a||null,f:r.f||null,k:r.k||null,d:String(r.d||''),n:n(r.n),i:n(r.i),o:n(r.o),cr:n(r.cr),cw:n(r.cw),c:n(r.c)};}
 function normTok(t){if(!t||typeof t!=='object')return null;const n=v=>Number.isFinite(+v)&&+v>0?Math.round(+v):0,u={input:n(t.input),output:n(t.output),cacheRead:n(t.cacheRead),cacheWrite:n(t.cacheWrite)};return tokTotal(u)?u:null;}
@@ -590,12 +590,48 @@ function tokLiveEvent(runId,evt){
 }
 let tokRaf=0,tokFull=false;
 function tokChanged(live=false){tokFull=tokFull||!live;if(tokRaf)return;tokRaf=requestAnimationFrame(()=>{tokRaf=0;const full=tokFull;tokFull=false;if(full&&['home','network','handoffs'].includes(ui.view))render();else{tokChrome();roomChrome();}});}
-// Top bar: today's tokens over every operation (plus what is running now); a click opens the consumption on the Painel.
+// Top bar: the plan's session and week when the runs reported them (like Claude Code's /usage), else today's tokens over every
+// operation (plus what is running now); the title always has today's tokens. A click opens the consumption on the Painel.
 function tokChrome(){
  const el=$('#tokMeter');if(!el)return;const today=tokSum(r=>r.d===tokDay()),live=tokLiveAll(),t=tokTotal(today)+live;
- el.hidden=!t&&!ui.usage.length;el.classList.toggle('live',live>0);
- el.innerHTML=`<i aria-hidden="true"></i><small>TOKENS HOJE</small><b>${tokFmt(t)}</b>`;
- el.title=tokTitle(today,today.cost,`Tokens de hoje em todas as operações${live?` (${tokNum(live)} em execução agora)`:''}`)+'\nClique para ver o consumo no Painel.';
+ el.hidden=!t&&!ui.usage.length&&!ui.limits;el.classList.toggle('live',live>0);
+ const lim=([k,label,,,short])=>{const w=limitWin(ui.limits?.[k]);return w?`<span class="tok-lim ${limTone(w)}"><small><span class="l">${label}</span><span class="s">${short}</span></small><span class="tok-lim-bar"><i style="width:${w.used==null?0:Math.max(2,Math.round(w.used*100))}%"></i></span><b>${limPct(w)}</b></span>`:'';},lims=LIM_WINS.map(lim).join('');
+ el.innerHTML=lims?`<i aria-hidden="true"></i><span class="tok-lims">${lims}</span>`:`<i aria-hidden="true"></i><small>TOKENS HOJE</small><b>${tokFmt(t)}</b>`;
+ el.title=tokTitle(today,today.cost,`Tokens de hoje em todas as operações${live?` (${tokNum(live)} em execução agora)`:''}`)+(ui.limits?'\n\n'+limTitle():'')+'\nClique para ver o consumo no Painel.';
+}
+/* Plan limits (subscription logins): the 5-hour session and the week, the same numbers as Claude Code's /usage and claude.ai, so they
+   count everything the person runs on that account, not only this app. Every claude -p run reports them (rate_limit_event); the bridge
+   keeps the latest (#squad-memory.limits, /api/health) and streamRun takes them live. A window whose reset time has passed shows no
+   number until the next run. API key logins have no such limits: nothing shows. */
+const LIM_WINS=[['session','SESSÃO','Sessão atual','5 HORAS','5H'],['week','SEMANA','Semana','7 DIAS','7D']];
+function normLimits(l){
+ if(!l||typeof l!=='object')return null;
+ const win=w=>{if(!w||typeof w!=='object')return null;const used=w.used==null||!Number.isFinite(+w.used)?null:Math.min(Math.max(+w.used,0),1),resetsAt=+w.resetsAt>0?Math.round(+w.resetsAt):0;return used==null&&!resetsAt?null:{used,resetsAt,status:String(w.status||'').slice(0,40)};};
+ const session=win(l.session),week=win(l.week);return session||week?{at:+l.at>0?+l.at:Date.now(),status:String(l.status||'').slice(0,40),session,week}:null;
+}
+// The raw rate_limit_info of a stream event (same reading as limitsOf in db.js).
+function limitsFromInfo(i){if(!i||typeof i!=='object')return null;const u=i.unifiedWindows&&typeof i.unifiedWindows==='object'?i.unifiedWindows:{},w=k=>{const x=u[k]||(i.rateLimitType===k?i:null);return x?{used:x.utilization,resetsAt:x.resetsAt,status:x.status}:null;};return normLimits({at:Date.now(),status:i.status,session:w('five_hour'),week:w('seven_day')});}
+function limitsSet(l){l=normLimits(l);if(!l||(ui.limits&&ui.limits.at>l.at))return;ui.limits=l;limitsPaint();}
+function limitsPaint(){tokChrome();const el=$('#homeLimits');if(el)el.outerHTML=limitsPanelHTML();}
+function limitWin(w){if(!w)return null;const expired=!!w.resetsAt&&w.resetsAt*1000<=Date.now();return{used:expired?null:w.used,resetsAt:expired?0:w.resetsAt,status:w.status,expired};}
+function limPct(w){return w.used==null?'–':w.used>0&&w.used<.005?'<1%':Math.round(w.used*100)+'%';}
+function limTone(w){return w.used==null?'idle':w.used>=.9||(w.status&&w.status!=='allowed')?'hot':w.used>=.75?'warm':'';}
+function limReset(w){
+ if(w.expired)return'Reiniciou. O número volta na próxima execução.';if(!w.resetsAt)return'';
+ const d=new Date(w.resetsAt*1000),now=new Date(),diff=d-now,hm=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),tomorrow=new Date(now);tomorrow.setDate(now.getDate()+1);
+ const when=tokDay(d)===tokDay(now)?`hoje às ${hm}`:tokDay(d)===tokDay(tomorrow)?`amanhã às ${hm}`:`${d.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'})} às ${hm}`;
+ const h=Math.floor(diff/36e5),m=Math.round(diff%36e5/6e4),rel=diff<864e5?(h?`${h} h${m?` ${m} min`:''}`:`${Math.max(1,m)} min`):'';
+ return`Reinicia ${when}${rel?` (em ${rel})`:''}`;
+}
+function limAgo(at){const m=Math.round((Date.now()-at)/6e4);return m<1?'agora':m<60?`há ${m} min`:m<1440?`há ${Math.round(m/60)} h`:`há ${Math.round(m/1440)} dia(s)`;}
+function limTitle(){return[`Plano do Claude (atualizado ${limAgo(ui.limits.at)}):`,...LIM_WINS.map(([k,,label])=>{const w=limitWin(ui.limits[k]);return w?`${label}: ${w.used==null?'sem dado':limPct(w)+' usado'}${limReset(w)?' · '+limReset(w):''}`:'';})].filter(Boolean).join('\n');}
+// Reset times count down and windows expire: repaint once a minute.
+setInterval(()=>{if(ui.limits)limitsPaint();},60000);
+// Painel: the two windows as cards, like the usage page of claude.ai.
+function limitsPanelHTML(){
+ if(!ui.limits)return'<div class="tok-limits" id="homeLimits" hidden></div>';
+ const card=([k,,label,span])=>{const w=limitWin(ui.limits[k]);return w?`<div class="tok-limit ${limTone(w)}"><div class="tok-limit-head"><span>${E(label.toUpperCase())}</span><small>${span}</small></div><strong>${limPct(w)}<em>${w.used==null?'':' usado'}</em></strong><span class="tok-limit-bar" role="img" aria-label="${E(`${label}: ${limPct(w)} usado`)}"><i style="width:${w.used==null?0:Math.max(1,Math.round(w.used*100))}%"></i></span><small>${E(limReset(w))}</small></div>`:'';};
+ return`<div class="tok-limits" id="homeLimits"><div class="tok-limit-cards">${LIM_WINS.map(card).join('')}</div><p class="tok-limit-note">Limites do plano do Claude, os mesmos do <code>/usage</code>: contam tudo o que você usa nessa conta, não só este app. Atualizado ${E(limAgo(ui.limits.at))}, na última execução.</p></div>`;
 }
 function tokOpen(){if(ui.view!=='home')goView('home');requestAnimationFrame(()=>{const el=$('#homeUsage');el?.scrollIntoView({behavior:state.settings.motion?'smooth':'auto',block:'start'});el?.classList.remove('flash');void el?.offsetWidth;el?.classList.add('flash');});}
 // Tokens of the conversation on screen (every chat kind): the sum of its replies, in the chat header (#chatTok).
@@ -2297,7 +2333,7 @@ async function checkBridge(notify=false){
  if(!BRIDGE_TOKEN){ui.bridge={online:false,checked:true,version:null,error:'Página aberta sem o bridge.'};renderIndicator();return ui.bridge;}
  try{
   const h=await bridgeFetch('/api/health'+(runtime().claudePath?'?claudePath='+encodeURIComponent(runtime().claudePath):''));
-  ui.bridge={online:!!h.claudeVersion,checked:true,version:h.claudeVersion,path:h.claudePath,error:h.claudeError,defaultCwd:h.defaultCwd,projectsDir:h.projectsDir,home:h.home,platform:h.platform,figmaToken:h.figmaToken,email:h.email||null};
+  ui.bridge={online:!!h.claudeVersion,checked:true,version:h.claudeVersion,path:h.claudePath,error:h.claudeError,defaultCwd:h.defaultCwd,projectsDir:h.projectsDir,home:h.home,platform:h.platform,figmaToken:h.figmaToken,email:h.email||null};if(h.limits)limitsSet(h.limits);
   bridgeFetch('/api/config',{method:'POST',body:JSON.stringify({concurrency:runtime().concurrency})}).catch(()=>{});
   if(notify)toast(h.claudeVersion?`Claude Code ${h.claudeVersion} conectado.`:`Bridge ativo, mas o Claude Code falhou: ${h.claudeError}`,h.claudeVersion?'ok':'error');
  }catch(error){ui.bridge={online:false,checked:true,version:null,error:error.message};if(notify)toast(error.message,'error');}
@@ -2318,7 +2354,7 @@ async function streamRun(runId,onEvent,replay=false){
  const reader=res.body.getReader(),decoder=new TextDecoder();let buffer='',exit=null;
  for(;;){
   const {value,done}=await reader.read();if(done)break;buffer+=decoder.decode(value,{stream:true});
-  let cut;while((cut=buffer.indexOf('\n\n'))>=0){const chunk=buffer.slice(0,cut);buffer=buffer.slice(cut+2);const data=chunk.split('\n').filter(l=>l.startsWith('data: ')).map(l=>l.slice(6)).join('\n');if(!data)continue;let evt;try{evt=JSON.parse(data);}catch{continue;}if(!replay)tokLiveEvent(runId,evt);onEvent(evt);if(evt.type==='exit')exit=evt;}
+  let cut;while((cut=buffer.indexOf('\n\n'))>=0){const chunk=buffer.slice(0,cut);buffer=buffer.slice(cut+2);const data=chunk.split('\n').filter(l=>l.startsWith('data: ')).map(l=>l.slice(6)).join('\n');if(!data)continue;let evt;try{evt=JSON.parse(data);}catch{continue;}if(!replay){tokLiveEvent(runId,evt);if(evt.type==='rate_limit_event')limitsSet(limitsFromInfo(evt.rate_limit_info));}onEvent(evt);if(evt.type==='exit')exit=evt;}
  }
  if(!replay){if(exit)usageAdd(exit,runId);else{ui.tokLive.delete(runId);tokChanged(true);}}
  if(!exit)throw Error('Conexão com o bridge encerrada antes do fim da execução.');
@@ -3215,7 +3251,7 @@ const realOutputs=f=>f.outputs.filter(o=>o.simulated===false&&!o.error);
 function tokBarsHTML(rows,max){return rows.map(r=>`<div class="tok-row" title="${E(tokTitle(r.s,r.s.cost,r.title||r.label))}">${r.face||''}<span class="tok-row-label">${r.label}</span><span class="tok-row-bar"><i style="width:${max?Math.max(2,Math.round(tokTotal(r.s)/max*100)):0}%"></i></span><b>${tokFmt(tokTotal(r.s))}</b></div>`).join('');}
 function tokGroup(key){const m=new Map();for(const r of ui.usage){const k=r[key]||'';let s=m.get(k);if(!s)m.set(k,s=tokZero());s.input+=r.i;s.output+=r.o;s.cacheRead+=r.cr;s.cacheWrite+=r.cw;s.cost+=r.c;s.runs+=r.n;}return[...m.entries()].sort((x,y)=>tokTotal(y[1])-tokTotal(x[1]));}
 function homeUsageHTML(){
- const all=tokSum(),head=`<div class="home-section-head"><span>CONSUMO DE TOKENS</span><span>${all.runs?`${tokNum(all.runs)} EXECUÇÕES${all.cost?` · ${E(tokMoney(all.cost))}`:''}`:''}</span></div>`;
+ const all=tokSum(),head=`<div class="home-section-head"><span>CONSUMO DE TOKENS</span><span>${all.runs?`${tokNum(all.runs)} EXECUÇÕES${all.cost?` · ${E(tokMoney(all.cost))}`:''}`:''}</span></div>${limitsPanelHTML()}`;
  if(!tokTotal(all))return`${head}<div class="home-empty">${icon('cpu')}${liveMode()?'Nenhum token gasto ainda. Etapas, planos do comandante, conversas e reuniões entram aqui assim que rodarem.':'Os tokens aparecem aqui quando a squad roda com o Claude Code pelo bridge. A demonstração não gasta tokens.'}</div>`;
  const day=n=>{const d=new Date();d.setDate(d.getDate()-n);return tokDay(d);},since=n=>{const from=day(n-1);return tokSum(r=>r.d>=from);};
  const kpis=[['HOJE',tokSum(r=>r.d===day(0))],['7 DIAS',since(7)],['30 DIAS',since(30)],['TOTAL',all]];
