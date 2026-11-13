@@ -183,6 +183,8 @@ test('run streams events and final result with system prompt and flags', async (
   assert.equal(exit.status, 'done');
   assert.equal(exit.result, 'ECHO:hello agent|SYS:be brief');
   assert.equal(exit.costUsd, 0.001);
+  // Tokens summed over every model of the run (modelUsage), the one that wrote the most named.
+  assert.deepEqual(exit.usage, { input: 15, output: 6, cacheRead: 100, cacheWrite: 20, model: 'claude-fake' });
 });
 
 test('partial streams text deltas only when asked (chat runs)', async () => {
@@ -460,6 +462,11 @@ test('run history survives a restart; a run cut by a dead bridge comes back inte
   assert.equal(first.agentId, 'agent-x');
   assert.equal(first.kind, 'step');
   assert.equal(first.costUsd, 0.001);
+  // Tokens per run reach the usage summary (page tag and endpoint), grouped by operation, agent, feature, kind and day.
+  const usage = (await (await b.api('/api/usage')).json()).usage;
+  assert.equal(usage.length, 1);
+  assert.deepEqual({ ...usage[0], d: undefined }, { p: 'p1', a: 'agent-x', f: 'f1', k: 'step', d: undefined, n: 1, i: 15, o: 6, cr: 100, cw: 20, c: 0.001 });
+  assert.deepEqual(pageTag(await page(b.base), 'squad-memory').usage, usage);
   assert.equal(list.find(r => r.id === cut).status, 'interrupted');
   // Replay from the database: the same events, without the partial text deltas.
   const replay = await collect(done, b.base, b.token);

@@ -99,10 +99,27 @@ function positions(prev, keys) {
 
 /** Run history fields taken from the page (body.meta of POST /api/runs); also used by the bridge before a database exists. */
 const runMeta = m => ({ projectId: REF_RE.test(m?.projectId || '') ? m.projectId : null, agentId: REF_RE.test(m?.agentId || '') ? m.agentId : null, featureId: REF_RE.test(m?.featureId || '') ? m.featureId : null, kind: RUN_KINDS.has(m?.kind) ? m.kind : null });
+/** Tokens of a claude -p result event: modelUsage (every model the run used, colleagues and background calls included) or usage. */
+const tokN = v => Number.isFinite(Number(v)) && Number(v) > 0 ? Math.round(Number(v)) : 0;
+function usageOf(r) {
+  if (!isObj(r)) return null;
+  const models = isObj(r.modelUsage) ? Object.values(r.modelUsage).filter(isObj) : [];
+  const sum = k => models.reduce((n, m) => n + tokN(m[k]), 0);
+  const u = models.length
+    ? { input: sum('inputTokens'), output: sum('outputTokens'), cacheRead: sum('cacheReadInputTokens'), cacheWrite: sum('cacheCreationInputTokens') }
+    : isObj(r.usage) ? { input: tokN(r.usage.input_tokens), output: tokN(r.usage.output_tokens), cacheRead: tokN(r.usage.cache_read_input_tokens), cacheWrite: tokN(r.usage.cache_creation_input_tokens) } : null;
+  if (!u || !(u.input + u.output + u.cacheRead + u.cacheWrite)) return null;
+  const model = models.length ? Object.keys(r.modelUsage).sort((a, b) => tokN(r.modelUsage[b].outputTokens) - tokN(r.modelUsage[a].outputTokens))[0] : '';
+  return { ...u, model: String(model || '').slice(0, 80) };
+}
 function checkWorkspace(ws) {
   if (!isObj(ws) || ws.version !== 2 || !Array.isArray(ws.agents) || !Array.isArray(ws.projects) || !ws.projects.length) throw bad('Workspace inválido. Esperado um workspace SQUAD CODE v2.');
 }
 
+const USAGE_SCHEMA = `CREATE TABLE usage (run_id TEXT PRIMARY KEY, at TEXT NOT NULL, kind TEXT, project_id TEXT, agent_id TEXT, feature_id TEXT, model TEXT, input INTEGER NOT NULL, output INTEGER NOT NULL, cache_read INTEGER NOT NULL, cache_write INTEGER NOT NULL, cost_usd REAL);
+CREATE INDEX usage_at ON usage (at);`;
+const USAGE_INSERT = 'INSERT OR REPLACE INTO usage (run_id, at, kind, project_id, agent_id, feature_id, model, input, output, cache_read, cache_write, cost_usd) VALUES (@runId, @at, @kind, @projectId, @agentId, @featureId, @model, @input, @output, @cacheRead, @cacheWrite, @costUsd)';
+const KEEP_USAGE = 50000;
 function schema() {
   const entity = spec => {
     const gen = Object.entries(spec.cols || {}).map(([c, p]) => `,\n  ${c} GENERATED ALWAYS AS (json_extract(data, '${p}')) VIRTUAL`).join('');
@@ -151,6 +168,17 @@ function openStore(dataDir) {
   db.pragma('foreign_keys = ON');
   db.pragma('busy_timeout = 5000');
   if (db.pragma('user_version', { simple: true }) < 1) db.transaction(() => { db.exec(schema()); db.pragma('user_version = 1'); })();
+  // v2: tokens per run, kept apart from the run history (which keeps only the newest runs) so the totals survive its pruning.
+  // Runs already in the history get their row from the saved result event.
+  if (db.pragma('user_version', { simple: true }) < 2) db.transaction(() => {
+    db.exec(USAGE_SCHEMA);
+    const add = db.prepare(USAGE_INSERT);
+    for (const r of db.prepare("SELECT r.id, r.kind, r.project_id, r.agent_id, r.feature_id, r.started_at, r.cost_usd, e.data FROM runs r JOIN run_events e ON e.run_id = r.id AND e.type = 'result'").all()) {
+      let u = null; try { u = usageOf(JSON.parse(r.data)); } catch {}
+      if (u) add.run({ runId: r.id, at: r.started_at, kind: r.kind, projectId: r.project_id, agentId: r.agent_id, featureId: r.feature_id, model: u.model, input: u.input, output: u.output, cacheRead: u.cacheRead, cacheWrite: u.cacheWrite, costUsd: r.cost_usd });
+    }
+    db.pragma('user_version = 2');
+  })();
 
   const q = {
     metaGet: db.prepare('SELECT value FROM meta WHERE key = ?').pluck(),
@@ -178,6 +206,10 @@ function openStore(dataDir) {
     runGet: db.prepare('SELECT * FROM runs WHERE id = ?'),
     runEvents: db.prepare('SELECT data FROM run_events WHERE run_id = ? ORDER BY seq').pluck(),
     runLastSeq: db.prepare('SELECT coalesce(max(seq), 0) FROM run_events WHERE run_id = ?').pluck(),
+    usageAdd: db.prepare(USAGE_INSERT),
+    usagePrune: db.prepare(`DELETE FROM usage WHERE run_id NOT IN (SELECT run_id FROM usage ORDER BY at DESC LIMIT ${KEEP_USAGE})`),
+    // One row per operation/agent/feature/kind/local day: the page sums what each place shows.
+    usageSum: db.prepare("SELECT project_id AS p, agent_id AS a, feature_id AS f, kind AS k, date(at, 'localtime') AS d, count(*) AS n, sum(input) AS i, sum(output) AS o, sum(cache_read) AS cr, sum(cache_write) AS cw, round(sum(coalesce(cost_usd, 0)), 6) AS c FROM usage GROUP BY 1, 2, 3, 4, 5"),
     runPrune: db.prepare(`DELETE FROM runs WHERE status != 'running' AND id NOT IN (SELECT id FROM runs ORDER BY started_at DESC LIMIT ${KEEP_RUNS})`),
   };
   const ent = {};
@@ -369,7 +401,10 @@ function openStore(dataDir) {
   const appendRunEvents = db.transaction((runId, events) => { for (const e of events) q.runEvent.run(runId, e.seq, e.type, e.data); if (events.length) q.runCount.run(events.at(-1).seq, runId); });
   function finishRun(r, exit) {
     q.runFinish.run({ id: r.id, status: r.status, endedAt: r.endedAt, result: JSON.stringify(exit).slice(0, 40000), costUsd: exit.costUsd ?? null, durationMs: exit.durationMs ?? null, sessionId: exit.sessionId ?? null });
+    const u = exit.usage;
+    if (u) { q.usageAdd.run({ runId: r.id, at: r.startedAt, kind: r.meta.kind, projectId: r.meta.projectId, agentId: r.meta.agentId, featureId: r.meta.featureId, model: u.model || null, input: u.input, output: u.output, cacheRead: u.cacheRead, cacheWrite: u.cacheWrite, costUsd: exit.costUsd ?? null }); q.usagePrune.run(); }
   }
+  const usageSummary = () => q.usageSum.all();
   const summary = r => r && { id: r.id, status: r.status, label: r.label || '', kind: r.kind, project: r.project, projectId: r.project_id, agentId: r.agent_id, featureId: r.feature_id, cwd: r.cwd, startedAt: r.started_at, endedAt: r.ended_at, costUsd: r.cost_usd, durationMs: r.duration_ms, sessionId: r.session_id, events: r.events };
   function listRuns({ projectId = '', limit = 50 } = {}) {
     const n = Math.min(Math.max(Number(limit) || 50, 1), KEEP_RUNS);
@@ -400,10 +435,10 @@ function openStore(dataDir) {
     file, migration, interrupted, runMeta,
     syncWorkspace, readWorkspace, backupWorkspace, listSnapshots, getSnapshot,
     saveRoom, loadRooms, saveChat, deleteChat, loadChats, sweep,
-    insertRun, appendRunEvents, finishRun, listRuns, getRun, runEvents,
+    insertRun, appendRunEvents, finishRun, listRuns, getRun, runEvents, usageSummary,
     close: () => db.close(),
   };
 }
 
 // driverError: why better-sqlite3 did not load ('' when it did); the bridge checks it at start, before any database exists.
-module.exports = { openStore, hash, checkWorkspace, runMeta, driverError };
+module.exports = { openStore, hash, checkWorkspace, runMeta, usageOf, driverError };
