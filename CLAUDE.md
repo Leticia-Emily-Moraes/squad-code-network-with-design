@@ -88,7 +88,7 @@ workspace on the first changing write of each bridge start and on `force`, brows
 text, so browsers still match) and the files move to `data/legacy-json/`. A second tag `#squad-memory` carries `{rooms, chats}` (last
 200 room messages per project; `sweep` first drops chats/rooms of features, agents or projects that no longer exist). `POST
 /api/rooms/:projectId` `{seq, upserts, removes}` (ids `rm<n>`, texts cut to the room's limits, 800 kept); `PUT|DELETE
-/api/chats/:kind/:key` (feature, agent, doc; 300 messages kept). Runs: `insertRun` at spawn (`body.meta` whitelisted by `runMeta`:
+/api/chats/:kind/:key` (feature, review, agent, doc; 300 messages kept). Runs: `insertRun` at spawn (`body.meta` whitelisted by `runMeta`:
 projectId, agentId, featureId, kind), events batched every 200 ms (`persistEvent`; no `stream_event`, tool results cut at 4000, exit
 always kept), `finishRun` on close; at start runs left `running` become `interrupted` with a synthetic exit event; newest 300 kept.
 `GET /api/runs` (`?projectId`, `limit`) lists the history, and `/api/runs/:id[/events]` fall back to it for runs not in memory; the
@@ -180,7 +180,7 @@ self-signed `tests/fixtures/smtp-cert.pem` trusted through `NODE_EXTRA_CA_CERTS`
   modal kind `agent-chat`, opened by `openAgentChat` on a double click on an agent in the `network` view; a single click selects) share one engine
   and the same DOM ids (`#feMsgs`, `#feChatInput`): generic helpers read `chatNow()` and branch on the chat's `kind`.
   The agent chat offers `AGENT_CHAT_MENUS` per `chatFamily` (commander/adr/prd/op), handled by `agentChatAct`; free
-  talk is `runAgentChat` (bridge, no tools). Conversations are kept in `ui.featureChats`/`ui.agentChats`/`ui.docChats` (filled at boot
+  talk is `runAgentChat` (bridge, no tools). Conversations are kept in `ui.featureChats`/`ui.reviewChats`/`ui.agentChats`/`ui.docChats` (filled at boot
   from `#squad-memory.chats`): `chatStash` (the Stop functions) stores `chatSnapshot(c)` there, and with the bridge `chatPersist`
   (hooked in `chatPush`/`chatSettle`/`chatFooter`, 800 ms) and `chatFlush` (beacon on `pagehide`) save it to the database.
   Every chat turn runs with `CHAT_RUN` over `runOptionsFor` (`tools:[]`, `permissionMode:'dontAsk'`, `partial:true`); never
@@ -276,7 +276,7 @@ self-signed `tests/fixtures/smtp-cert.pem` trusted through `NODE_EXTRA_CA_CERTS`
   `backlog`. The DIRETRIZES catalog paths (ADR/PRD/C4) follow the same `docs/` layout.
 - Features carry `route` (ordered agent ids) built by `routeFor`, which maps scopes to roles with
   `ROLE_FAMILY` (e.g. node/java/dotnet cover the backend step). A finished route sends the feature to
-  human review; only approval marks it done and unblocks dependents. `designer` is a route role the squad may lack
+  human review; only approval marks it done and unblocks dependents (see **Delivery review** below). `designer` is a route role the squad may lack
   (`ROUTE_OPTIONAL`, `routeOptional`): it goes before the interface step in the frontend, fullstack and mobile scopes only when the
   squad has one (never reported as missing); scope `designer` is po > designer > qa, with the designer required.
 - MCP per agent: `a.mcp` holds keys of `MCP_SERVERS` (persisted in `normalizeWorkspace`, `presetDefaults`); `runOptionsFor` sends
@@ -374,6 +374,32 @@ Retomar; `launchNext`/`scheduleStep` only move in `running`):
   the stream: text → bubbles, tool_use → chips (`toolActivity`), `Agent` → call card (`roomCalling`), subagent messages
   (`parent_tool_use_id`) → thread, tool_result → the card's answer. Chats never get agents.
 - Individual spawn (`spawnAgent`, `kind:'spawn'`) skips the commander but runs in the room too.
+
+**Delivery review.** `buildStepPrompt` numbers the criteria and the tasks (`featureItems`: a text's list items, any depth, or its
+non-empty lines without a list; `featureNumbered`) and ends with `reportContract(last)`: after the Markdown report, a last ```json
+`{"report":{done[], notDone[{item,reason}], pending[], decisions[], next[], files[], checks[], tasks[{n,done,note}]}}`, plus
+`criteria[{n,status:"ok"|"partial"|"no",evidence}]` and `scenarios[]` only for the last step. `stepReport` (`parseCoWrite` +
+`normalizeReport`) keeps the Markdown without the block in `o.text` and the data in `o.report` (only when present, so old outputs do
+not churn); no JSON → the Markdown alone. `f.runAt` (set in `launchNext`) bounds the current delivery (`deliveryOutputs`);
+`deliveryReport` merges it (lists with the agent that wrote each item, latest mark per task/criterion; without `scenarios` it reads
+the last report's "Cenários de teste humano" section). `reviewArrive` (route finished) writes the agents' marks into `f.tasks` as
+`- [x]`/`- [ ]` (`featureTasksMarked`) and clears `f.review`. Persisted (`normalizeWorkspace` via `featureNotes`, `createFeature`):
+`f.review` = the person's part `{criteria[{n,comment}], tasks[{n,done}] (only boxes that differ from the agents' mark), note, at}`
+and `f.rework` = the same with `text` per item. Screen: `openFeatureEditor`/`openFeature`/`openReview` open review/done/running
+features in the feature editor modal in review mode (`openReviewEditor`, form `#reviewForm` → `saveReview`, size `review-editor`):
+`fe-md` sections with `rv-*` content (header, rework of the last round, ESCOPO, CRITÉRIOS with status badge + evidence + comment
+`#rvC<n>`, TAREFAS checklist, FEITO/NÃO FEITO, PENDÊNCIAS/DECISÕES/PRÓXIMOS PASSOS, ARQUIVOS/VERIFICAÇÕES/CENÁRIOS, OBSERVAÇÃO
+`#rvNote`, the specialists' timeline collapsed with rendered Markdown) and the review chat on the right (chat kind `review`,
+`newReviewChat`, the squad's PRD via `coWriterAgent`, `CHAT_RUN`, `REVIEW_CHAT_SYSTEM` + `reviewChatPrompt`; its JSON
+`{"comments":[{n,comment}],"note"}` lands through `applyReviewWrite` → `chatApply` with fields `rc<n>`/`rnote`, `feFieldId`/
+`feFieldLabel`, undo included; saved in the database as chat kind `review`). `refreshFeatureModal` → `refreshReviewEditor` rebuilds
+the form only when `reviewSig` changes, keeping typed comments and open sections (`reviewDraft`). Footer: Salvar comentários,
+Solicitar ajustes (`approveFeature(id,false)`: needs a criterion comment or the note, moves them to `f.rework`, back to Prontas)
+and Aprovar entrega (clears `f.rework`). `f.rework` reaches every step of the next run as "## Ajustes pedidos na revisão humana"
+(`reworkBlock`) and shows in the pending feature editor. The operation page's side panel (`reviewHTML`) is a summary with
+"Abrir revisão" (`feature-review`). Demo: `simReport` spreads the tasks over the route, leaves the last one not done and lets the
+last step evaluate the criteria. `renderMarkdown` (shared by previews, chats, DIRETRIZES and the review; escape first) also does
+GFM tables, quotes, `---`, http/https links, nested lists and numbered lists with their own start.
 "Distribuir features" (`openDistribution`, deterministic `routeFor` plan, `applyPlan`) still exists for planning by hand, and
 `launchNext` only picks features of `runner.sprintId`. The export orders features sprint by sprint,
 adds `sprint:` to each `spec.md`, a Sprints section to `scope.md` and `/executar-sprint`.

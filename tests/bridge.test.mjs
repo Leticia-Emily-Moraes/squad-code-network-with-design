@@ -506,6 +506,8 @@ test('chats are saved per kind, capped and swept when their feature is gone', as
   assert.equal((await put('feature', 'f1', { seq: 2, greeting: 'olá', messages: msgs(2) })).status, 200);
   assert.equal((await put('doc', 'p1:kickoff:a1+a2', { seq: 1, greeting: 'bom dia', greetings: { a1: 'oi' }, since: 0, messages: msgs(1) })).status, 200);
   assert.equal((await put('feature', 'gone', { seq: 1, messages: msgs(1) })).status, 200);
+  assert.equal((await put('review', 'f1', { seq: 3, greeting: 'li o relatório', messages: msgs(3) })).status, 200);
+  assert.equal((await put('review', 'gone', { seq: 1, messages: msgs(1) })).status, 200);
   assert.equal((await put('evil', 'a1', { messages: [] })).status, 400);
   assert.equal((await put('agent', '../a1', { messages: [] })).status, 400);
   assert.equal((await put('agent', 'a1', { greeting: 'sem mensagens' })).status, 400);
@@ -517,6 +519,8 @@ test('chats are saved per kind, capped and swept when their feature is gone', as
   assert.equal(chats.feature.f1.messages.length, 2);
   assert.deepEqual(chats.doc['p1:kickoff:a1+a2'].greetings, { a1: 'oi' });
   assert.equal(chats.feature.gone, undefined); // no feature 'gone' in the workspace
+  assert.equal(chats.review.f1.messages.length, 3); // the delivery review chat of the same feature is its own conversation
+  assert.equal(chats.review.gone, undefined);
   assert.equal((await api('/api/chats/agent/a1', { method: 'DELETE' })).status, 200);
   chats = pageTag(await page(), 'squad-memory').chats;
   assert.equal(chats.agent.a1, undefined);

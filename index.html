@@ -1639,6 +1639,99 @@ body:not(.reduce-motion) .at-tile.leaving,.at-tile.leaving{animation:at-leave .4
 @media (max-width:1100px){.at{grid-template-columns:minmax(0,1fr) 6px min(var(--at-side,340px),60vw)}.at-agenda{display:none}}
 @media (max-width:900px){.at{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,40dvh) minmax(0,1fr);grid-template-areas:"bar" "stage" "side"}.at-split{display:none}.at-bar{flex-wrap:wrap;gap:8px 12px;padding:8px 12px}.at-actions{margin-left:auto}.at-side{border-left:0;border-top:1px solid #ffffff14}.at-stage{padding:10px}.at-tile-face{height:62%}.at-screen-head{padding-right:12px}.at-unshare{position:static;margin:8px 12px 0;align-self:flex-start}}
 @media (max-width:560px){.at-tiles,.at-tiles[data-n],.at-stage[data-mode="share"] .at-tiles{grid-template-columns:repeat(var(--n,4),minmax(0,1fr));grid-auto-rows:minmax(0,1fr)}.at-plate small,.at-brand small{display:none}.at-tabs button{padding:0 9px}.at-actions .btn.primary{padding:6px 9px}}
+/* Markdown extras (renderMarkdown): tables, quotes, rules, links */
+.conv-md .md-table,.fe-bubble-md .md-table{overflow-x:auto;margin:6px 0 10px}
+.conv-md table,.fe-bubble-md table{border-collapse:collapse;font-size:12px;min-width:50%}
+.conv-md th,.conv-md td,.fe-bubble-md th,.fe-bubble-md td{border:1px solid #ffffff1c;padding:5px 9px;text-align:left;vertical-align:top}
+.conv-md th,.fe-bubble-md th{background:#0e1a1f;color:var(--ink);font-weight:600}
+.conv-md blockquote,.fe-bubble-md blockquote{margin:6px 0 10px;padding:4px 12px;border-left:2px solid #30c5e866;color:#aeb9bd;background:#30c5e80a}
+.conv-md blockquote p:last-child,.fe-bubble-md blockquote p:last-child{margin-bottom:0}
+.conv-md hr,.fe-bubble-md hr{border:0;border-top:1px solid #ffffff1c;margin:12px 0}
+.conv-md a,.fe-bubble-md a{color:var(--cyan);text-decoration:underline;text-underline-offset:2px}
+.conv-md li>ul,.conv-md li>ol,.fe-bubble-md li>ul,.fe-bubble-md li>ol{margin:2px 0 2px}
+/* Delivery review: the feature editor in review mode (openReviewEditor) */
+.rv-form{--rv-ok:#4fd18b;--rv-partial:#e8b64a;--rv-no:#ef6b6b;--rv-none:#6c787d}
+.rv-head{display:flex;flex-direction:column;gap:10px;margin-bottom:4px}
+.rv-title{font-size:20px;font-weight:450;color:var(--ink);margin:0}
+.rv-tags,.rv-route,.rv-stats{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.rv-arrow{color:var(--dim);font-size:13px}
+.rv-who{display:inline-flex;align-items:center;gap:5px;font:600 9px var(--mono);letter-spacing:.8px;color:#b8c3c7;white-space:nowrap}
+.rv-who img{width:18px;height:18px;border-radius:50%;object-fit:cover;border:1px solid #ffffff22}
+.rv-stat{display:inline-flex;align-items:baseline;gap:5px;border:1px solid #ffffff14;background:#0a1013;padding:4px 9px;font:9px var(--mono);letter-spacing:.8px;color:var(--muted);text-transform:uppercase}
+.rv-stat b{font:600 13px var(--sans);color:var(--ink);letter-spacing:0}
+.rv-stat.ok b{color:var(--rv-ok)}.rv-stat.partial b{color:var(--rv-partial)}.rv-stat.no b{color:var(--rv-no)}.rv-stat.none b{color:var(--rv-none)}
+.rv-head .notice{margin:0}
+.rv-body{padding:12px 14px 14px}
+.rv-md{max-height:none;padding:0;font-size:13px;line-height:1.65}
+.rv-md>:first-child{margin-top:0}.rv-md p{margin:0 0 8px}
+.rv-empty{color:#6b777c;font-style:italic;font-size:12px;margin:0}
+.rv-crits{display:flex;flex-direction:column;gap:10px}
+.rv-crit{border:1px solid #ffffff12;border-left:3px solid var(--rv-none);background:#0a0f12;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.rv-crit[data-st="ok"]{border-left-color:var(--rv-ok)}.rv-crit[data-st="partial"]{border-left-color:var(--rv-partial)}.rv-crit[data-st="no"]{border-left-color:var(--rv-no)}
+.rv-crit header{display:flex;align-items:flex-start;gap:10px}
+.rv-n{flex:0 0 auto;min-width:20px;height:20px;display:inline-grid;place-items:center;font:600 10px var(--mono);color:var(--ink);background:#14232a;border-radius:2px}
+.rv-crit-text{flex:1;font-size:13px;line-height:1.5;color:var(--ink)}
+.rv-badge{flex:0 0 auto;font:600 8px var(--mono);letter-spacing:1px;padding:3px 7px;border:1px solid currentColor;color:var(--rv-none)}
+.rv-badge.ok{color:var(--rv-ok)}.rv-badge.partial{color:var(--rv-partial)}.rv-badge.no{color:var(--rv-no)}
+.rv-evidence{display:flex;flex-direction:column;gap:4px;padding-left:30px;font-size:12px;line-height:1.55;color:#c3cdd1}
+.rv-crit>.rv-empty{padding-left:30px}
+.rv-li{min-width:0;overflow-wrap:anywhere}.rv-li code,.rv-crit-text code{font:11px var(--mono);color:#9fe3f3;background:#0f1d22;padding:1px 4px}
+.rv-li a,.rv-crit-text a{color:var(--cyan)}
+.rv-comment{display:flex;flex-direction:column;gap:4px;padding-left:30px}
+.rv-comment span{font:600 8px var(--mono);letter-spacing:1.3px;color:var(--muted)}
+.rv-input{width:100%;resize:vertical;min-height:34px;background:#060a0c;border:1px solid #ffffff1a;color:var(--ink);font:12px/1.55 var(--sans);padding:7px 9px;transition:border-color .3s,box-shadow .5s}
+.rv-input:focus{outline:none;border-color:#30c5e888}
+.rv-input[readonly]{opacity:.55;cursor:not-allowed}
+.rv-input.fe-updated{border-color:var(--cyan);box-shadow:0 0 14px #30c5e833}
+.rv-note{min-height:60px}
+.rv-tasks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.rv-task{border:1px solid #ffffff0f;background:#0a0f12;padding:7px 10px}
+.rv-task label{display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:13px;line-height:1.5}
+.rv-task input{margin-top:3px;accent-color:var(--rv-ok)}
+.rv-task.done .rv-li{color:#aab6ba}
+.rv-task-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:4px 0 0 49px;font-size:11px;color:var(--muted)}
+.rv-task-meta em{color:#66737a}
+.rv-fixed{font:600 8px var(--mono);letter-spacing:1px;color:var(--rv-partial);border:1px solid #e8b64a55;padding:2px 6px}
+.rv-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.rv-groups.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.rv-groups+.rv-group{margin-top:12px}
+.rv-group{min-width:0}
+.rv-group-title{font:600 8px var(--mono);letter-spacing:1.4px;color:var(--muted);margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #ffffff12}
+.rv-group.ok .rv-group-title{color:var(--rv-ok)}.rv-group.no .rv-group-title{color:var(--rv-no)}.rv-group.partial .rv-group-title{color:var(--rv-partial)}
+.rv-list,.rv-files{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.rv-list li,.rv-files li{display:flex;flex-direction:column;gap:3px;font-size:12px;line-height:1.5;color:#d4dde0;padding-left:10px;border-left:1px solid #ffffff1a}
+.rv-files code{font:11px var(--mono);color:#9fe3f3;overflow-wrap:anywhere}
+.rv-reason{display:block;color:var(--muted);font-size:11px}
+.rv-timeline{display:flex;flex-direction:column;gap:6px}
+.rv-out{border:1px solid #ffffff12;background:#0a0f12}
+.rv-out.error{border-color:#ef6b6b55}
+.rv-out summary{display:flex;align-items:center;gap:9px;padding:8px 10px;cursor:pointer;list-style:none}
+.rv-out summary::-webkit-details-marker{display:none}
+.rv-out summary img{width:26px;height:26px;border-radius:50%;object-fit:cover;border:1px solid #ffffff22}
+.rv-out-id{display:flex;flex-direction:column;min-width:0;flex:1}
+.rv-out-id b{font:600 11px var(--mono);letter-spacing:.8px;color:var(--ink)}
+.rv-out-id small{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rv-out-sum{font-size:10px;color:var(--muted);white-space:nowrap}
+.rv-out[open] summary{border-bottom:1px solid #ffffff0d}
+.rv-out>.rv-md{padding:12px 14px}
+.rv-older{margin-top:4px}.rv-older>summary{cursor:pointer;font:600 8px var(--mono);letter-spacing:1.3px;color:var(--muted);padding:6px 0}
+.rv-older .rv-out{margin-top:6px;opacity:.85}
+.rv-rework p{margin:0 0 8px;font-size:12px;line-height:1.55;color:#d4dde0}
+.rv-rework b{font:600 9px var(--mono);letter-spacing:1px;color:var(--rv-partial,#e8b64a)}
+.rv-rework-note{margin:10px 0 0}
+.rv-rework-note>div{display:flex;flex-direction:column;gap:4px}
+.rv-rework-note small{color:var(--muted)}
+.rv-rework-note .rv-rework{margin-top:6px}
+.rv-foot-note{margin-top:14px}
+.review-editor .modal-footer{align-items:center}
+.rv-saved{font:9px var(--mono);letter-spacing:.8px;color:var(--muted)}
+.rv-summary h3{font-size:17px;font-weight:450;margin:14px 0 10px}
+.rv-summary .rv-stats{--rv-ok:#4fd18b;--rv-partial:#e8b64a;--rv-no:#ef6b6b;--rv-none:#6c787d}
+.rv-summary-line{font-size:12px;color:var(--muted);margin:10px 0 0;line-height:1.55}
+.rv-summary-last{display:flex;align-items:center;gap:8px;margin-top:10px}
+.rv-summary-last small{font:9px var(--mono);color:var(--dim)}
+@media (max-width:900px){.rv-groups,.rv-groups.three{grid-template-columns:1fr}}
+@media (max-width:640px){.rv-evidence,.rv-comment,.rv-crit>.rv-empty{padding-left:0}.rv-task-meta{margin-left:0}.rv-crit header{flex-wrap:wrap}}
 /* Notifications: bell in the top bar (unread count), panel under it, Configurações > Notificações. */
 .notif-wrap{position:relative;display:flex}
 .notif-bell{position:relative}
@@ -10795,7 +10888,7 @@ const DEFAULT_SETTINGS={motion:true,stepMs:1800,squadView:'city',cityShape:'flat
 function normalizeRuntime(r={}){const str=(v,max)=>typeof v==='string'?v.slice(0,max).trim():'';const n=Number(r.timeoutSec),c=Number(r.concurrency),b=Number(r.maxBudgetUsd);return{mode:r.mode==='demo'?'demo':'claude',claudePath:str(r.claudePath,400),permissionMode:Object.hasOwn(PERMISSION_MODES,r.permissionMode)?r.permissionMode:'acceptEdits',model:/^[A-Za-z0-9._\-\[\]]{0,80}$/.test(r.model||'')?(r.model||''):'',effort:EFFORTS.includes(r.effort)?r.effort:'',maxBudgetUsd:Number.isFinite(b)&&b>0&&b<=1000?String(b):'',timeoutSec:Number.isFinite(n)&&n>=10&&n<=7200?Math.round(n):900,concurrency:Number.isInteger(c)&&c>=1&&c<=8?c:2,addDirs:str(r.addDirs,2000),restrictTools:r.restrictTools!==false,extraAllowedTools:str(r.extraAllowedTools,2000)};}
 const AGENT_STAGES={discovery:{label:'Descoberta',short:'IDEIA'},identity:{label:'Identidade',short:'IDENTIDADE'},prompt:{label:'Prompt & Tools',short:'PROMPT'},validation:{label:'Validação',short:'VALIDAÇÃO'},ready:{label:'Pronto',short:'PRONTO'}};
 const STAGE_ORDER=['discovery','identity','prompt','validation','ready'];
-function createFeature(title,index,extra={}){return{id:id('feature'),key:'F'+pad(index),title,description:'',criteria:'Critérios de aceitação definidos no briefing.',scope:'fullstack',priority:'P1',status:'backlog',dependencies:[],route:[],currentAgentId:null,step:0,outputs:[],context:'',tasks:'',sprintId:'',briefs:[],setup:false,...extra};}
+function createFeature(title,index,extra={}){return{id:id('feature'),key:'F'+pad(index),title,description:'',criteria:'Critérios de aceitação definidos no briefing.',scope:'fullstack',priority:'P1',status:'backlog',dependencies:[],route:[],currentAgentId:null,step:0,outputs:[],context:'',tasks:'',sprintId:'',briefs:[],setup:false,runAt:'',review:null,rework:null,...extra};}
 /* Every operation opens Sprint 01 with the project setup (F00, `setup: true`): the first feature of the first sprint and a dependency of
    every other feature, so nothing else runs before it is approved. It cannot be deleted nor leave the first sprint; ensureSetup keeps
    the rule on creation, on every save of a feature and on load/import (older operations get it in backlog). */
@@ -10823,12 +10916,12 @@ function seedWorkspace(){
  const agents=['commander','po','architect','backend','frontend','qa'].map(role=>[role,ROLES[role]]).map(([role,r])=>({id:'agent-'+role,name:r.name,role,specialty:'',icon:'',description:r.description,prompt:r.prompt,model:r.model,effort:'',tools:['Read','Glob','Grep',...(['backend','frontend'].includes(role)?['Edit','Write']:[]),'Bash'],image:'',nextId:'',productionStage:'ready',hex:{...r.hex},linkId:'',...defaultSoul({name:r.name,role})}));
  placeDesks(agents);
  const features=[
-  createFeature('Autenticação e acesso',1,{priority:'P0',status:'done',description:'Cadastro, login, logout e recuperação de acesso.',criteria:'Validar entradas; restringir acesso administrativo; testar estados de sucesso e erro.',outputs:[{agentId:'agent-qa',at:nowISO(),text:'Registro de exemplo para demonstrar uma feature concluída. Não há código, testes ou execução real associados.',simulated:true}]}),
-  createFeature('Catálogo de produtos',2,{priority:'P0',description:'Listagem de produtos com busca, categorias, filtros e página de detalhes.',criteria:'Listagem paginada; filtros combináveis; estados vazio, carregando e erro; layout responsivo.'}),
-  createFeature('Carrinho e checkout',3,{priority:'P0',description:'Carrinho persistente e fechamento de pedido em sandbox.',criteria:'Recalcular valores no servidor; validar estoque; não armazenar dados de cartão.'}),
-  createFeature('Painel administrativo',4,{priority:'P1',scope:'frontend',description:'Interface para gerenciar produtos, estoque e pedidos.',criteria:'Acesso restrito; validação dos formulários; confirmação de exclusão.'}),
-  createFeature('Histórico de pedidos',5,{priority:'P1',scope:'backend',description:'Consulta paginada de pedidos por cliente.',criteria:'Isolamento por cliente; paginação; validação e estados de erro.'}),
-  createFeature('Qualidade e acessibilidade',6,{priority:'P2',scope:'qa',description:'Revisão final dos fluxos e checklist de acessibilidade.',criteria:'Listar evidências, lacunas e bloqueios; não declarar testes executados sem execução.'})
+  createFeature('Autenticação e acesso',1,{priority:'P0',status:'done',description:'Cadastro, login, logout e recuperação de acesso.',criteria:'- Entradas validadas no cadastro e no login\n- Área administrativa restrita a perfis autorizados\n- Estados de sucesso e erro testados',outputs:[{agentId:'agent-qa',at:nowISO(),text:'Registro de exemplo para demonstrar uma feature concluída. Não há código, testes ou execução real associados.',simulated:true}]}),
+  createFeature('Catálogo de produtos',2,{priority:'P0',description:'Listagem de produtos com busca, categorias, filtros e página de detalhes.',criteria:'- Listagem paginada\n- Filtros combináveis por categoria e busca\n- Estados vazio, carregando e erro\n- Layout responsivo do celular ao desktop',tasks:'- [ ] Endpoint GET /products com paginação e filtros\n- [ ] Tela de listagem com busca e categorias\n- [ ] Página de detalhes do produto\n- [ ] Estados vazio, carregando e erro'}),
+  createFeature('Carrinho e checkout',3,{priority:'P0',description:'Carrinho persistente e fechamento de pedido em sandbox.',criteria:'- Valores recalculados no servidor\n- Estoque validado antes de fechar o pedido\n- Nenhum dado de cartão armazenado',tasks:'- [ ] Carrinho persistente por cliente\n- [ ] Cálculo de totais no servidor\n- [ ] Fechamento de pedido no sandbox de pagamento'}),
+  createFeature('Painel administrativo',4,{priority:'P1',scope:'frontend',description:'Interface para gerenciar produtos, estoque e pedidos.',criteria:'- Acesso restrito a administradores\n- Formulários validados\n- Exclusão pede confirmação',tasks:'- [ ] Tela de produtos e estoque\n- [ ] Tela de pedidos\n- [ ] Confirmação de exclusão'}),
+  createFeature('Histórico de pedidos',5,{priority:'P1',scope:'backend',description:'Consulta paginada de pedidos por cliente.',criteria:'- Cada cliente vê só os próprios pedidos\n- Consulta paginada\n- Parâmetros validados com estados de erro',tasks:'- [ ] Consulta paginada por cliente\n- [ ] Validação dos parâmetros\n- [ ] Testes de isolamento entre clientes'}),
+  createFeature('Qualidade e acessibilidade',6,{priority:'P2',scope:'qa',description:'Revisão final dos fluxos e checklist de acessibilidade.',criteria:'- Evidências, lacunas e bloqueios listados\n- Nenhum teste declarado sem execução',tasks:'- [ ] Checklist de acessibilidade dos fluxos principais\n- [ ] Relatório de evidências e lacunas'})
  ];
  features[2].dependencies=[features[1].id];features[3].dependencies=[features[0].id];features[4].dependencies=[features[0].id,features[2].id];features[5].dependencies=features.slice(0,5).map(f=>f.id);
  const sprints=[createSprint(1,{id:'sprint-atlas-1',goal:'Base da loja: acesso, catálogo e compra.'}),createSprint(2,{id:'sprint-atlas-2',goal:'Gestão e pós-venda: painel administrativo, histórico de pedidos e qualidade.'})];features.forEach((f,i)=>{f.sprintId=sprints[i<3?0:1].id;});
@@ -10870,7 +10963,7 @@ function normalizeWorkspace(raw){
   if(!p||!Array.isArray(p.features)||p.features.length>150)throw Error('Projeto ou quantidade de features inválidos.');
   const ids=arr(p.agentIds,80).filter(a=>agentIds.has(a));
   const sprints=arr(p.sprints,50).filter(s=>s&&typeof s==='object').map(s=>({id:validId(s.id),name:str(s.name,60)||'Sprint',goal:str(s.goal,2000)}));if(!sprints.length)sprints.push(createSprint(1));const sprintIds=new Set(sprints.map(s=>s.id));
-  const features=p.features.map(f=>{if(!f)throw Error('Feature inválida.');return{id:validId(f.id),key:str(f.key,15),title:str(f.title,120)||'Sem título',description:str(f.description,8000),criteria:str(f.criteria,8000),scope:Object.hasOwn(SCOPES,f.scope)?f.scope:LEGACY_SCOPES[f.scope]||'fullstack',priority:['P0','P1','P2'].includes(f.priority)?f.priority:'P1',status:Object.hasOwn(STATUS,f.status)?(f.status==='running'?'ready':f.status):'backlog',dependencies:arr(f.dependencies,150).map(ref),route:arr(f.route,80).filter(a=>ids.includes(a)),currentAgentId:null,step:0,outputs:arr(f.outputs,300).filter(o=>o&&typeof o==='object').map(o=>({agentId:ref(o.agentId),at:date(o.at),text:str(o.text,40000),simulated:o.simulated!==false,error:o.error===true,costUsd:Number.isFinite(o.costUsd)?o.costUsd:null,durationMs:Number.isFinite(o.durationMs)?o.durationMs:null,sessionId:ref(o.sessionId)||null})),context:str(f.context,10000),tasks:str(f.tasks,8000),sprintId:sprintIds.has(f.sprintId)?f.sprintId:sprints[0].id,briefs:arr(f.briefs,80).map(b=>str(b,2000)),setup:f.setup===true};});
+  const features=p.features.map(f=>{if(!f)throw Error('Feature inválida.');return{id:validId(f.id),key:str(f.key,15),title:str(f.title,120)||'Sem título',description:str(f.description,8000),criteria:str(f.criteria,8000),scope:Object.hasOwn(SCOPES,f.scope)?f.scope:LEGACY_SCOPES[f.scope]||'fullstack',priority:['P0','P1','P2'].includes(f.priority)?f.priority:'P1',status:Object.hasOwn(STATUS,f.status)?(f.status==='running'?'ready':f.status):'backlog',dependencies:arr(f.dependencies,150).map(ref),route:arr(f.route,80).filter(a=>ids.includes(a)),currentAgentId:null,step:0,outputs:arr(f.outputs,300).filter(o=>o&&typeof o==='object').map(o=>({agentId:ref(o.agentId),at:date(o.at),text:str(o.text,40000),simulated:o.simulated!==false,error:o.error===true,costUsd:Number.isFinite(o.costUsd)?o.costUsd:null,durationMs:Number.isFinite(o.durationMs)?o.durationMs:null,sessionId:ref(o.sessionId)||null,...(normalizeReport(o.report)?{report:normalizeReport(o.report)}:{})})),context:str(f.context,10000),tasks:str(f.tasks,8000),sprintId:sprintIds.has(f.sprintId)?f.sprintId:sprints[0].id,briefs:arr(f.briefs,80).map(b=>str(b,2000)),setup:f.setup===true,runAt:Number.isFinite(Date.parse(f.runAt))?new Date(f.runAt).toISOString():'',review:featureNotes(f.review,false),rework:featureNotes(f.rework,true)};});
   const featureIds=new Set(features.map(f=>f.id));features.forEach(f=>{f.dependencies=[...new Set(f.dependencies.filter(d=>featureIds.has(d)&&d!==f.id))];if(f.briefs.length!==f.route.length)f.briefs=[];if(!f.route.length&&['ready','blocked'].includes(f.status))f.status='backlog';});
   if(hasCycle(features))throw Error('As dependências do backup formam um ciclo.');
   return{id:validId(p.id),code:str(p.code,20),name:str(p.name,70)||'Novo projeto',folder:str(p.folder,80),briefing:str(p.briefing,20000),figmaUrl:figmaLink(p.figmaUrl),figmaFolder:figmaFolderLink(p.figmaFolder),vision:str(p.vision,8000),scopeIn:str(p.scopeIn,8000),scopeOut:str(p.scopeOut,8000),glossary:str(p.glossary,8000),architecture:str(p.architecture,12000),adrs:arr(p.adrs,50).filter(x=>x&&typeof x==='object').map(x=>({id:ref(x.id)||id('adr'),title:str(x.title,120),status:ADR_STATUS.includes(x.status)?x.status:'Proposto',date:/^\d{4}-\d{2}-\d{2}$/.test(x.date||'')?x.date:'',content:str(x.content,12000)})).filter(x=>x.title),squadId:ref(p.squadId),commanderId:ids.includes(p.commanderId)&&agents.find(a=>a.id===p.commanderId)?.role==='commander'?p.commanderId:'',agentIds:[...new Set(ids)],sprints,features,logs:arr(p.logs,500).filter(l=>l&&typeof l==='object').map(l=>({id:keepId(l.id,'event'),at:date(l.at),agentId:ref(l.agentId)||null,type:['system','plan','agent','handoff','review'].includes(l.type)?l.type:'system',message:str(l.message,3000),simulated:l.simulated!==false})),handoffs:arr(p.handoffs,500).filter(h=>h&&agentIds.has(h.from)&&agentIds.has(h.to)).map(h=>({id:keepId(h.id,'handoff'),at:date(h.at),from:h.from,to:h.to,featureId:ref(h.featureId),context:str(h.context,10000),manual:!!h.manual,simulated:h.simulated!==false})),createdAt:date(p.createdAt)};
@@ -10940,7 +11033,7 @@ state.agents.forEach(a=>{const k=templateAvatarKey(a);if(k&&a.image&&[TEMPLATE_A
 // Preset icons changed (ABELHA-RAINHA -> bee, ZERO -> slashed zero); agents still using the previous preset icon follow.
 [['ABELHA-RAINHA','queen','bee'],['ZERO','radio','zero'],['VANILLA','html','js'],['PIPELINE','flow','git'],['SCALPEL','check','flask'],['WARDEN','shield','bug']].forEach(([name,from,to])=>state.agents.forEach(a=>{if(a.name===name&&a.icon===from)a.icon=to;}));
 const ui={dismissedId:null,squadSel:null,squadDraft:null,squadPick:null,squadSlotPending:null,squadFlash:null,opsNew:null,opsFeature:null,opsFeatureDraft:null,opsPlan:null,opsFeatView:'list',opsLast:{scope:'fullstack',priority:'P1',sprintId:''},sprintOpen:{},selectedId:state.projects.find(p=>p.id===state.projectId)?.commanderId||state.agents[0]?.id,view:'home',lastView:'home',focus:false,modal:null,returnFocus:null,draft:null,pendingPlan:null,confirm:null,featureQuery:'',logFilter:'all',bridge:{online:false,checked:false,version:null,error:null},opsChat:{open:false,min:false,unread:0,pid:''},consoles:[],consoleId:null,settingsTab:'workspace',settingsScope:'user',settingsFile:null,notifOpen:false};
-if(bootMemory?.chats){ui.featureChats=bootMemory.chats.feature||{};ui.agentChats=bootMemory.chats.agent||{};ui.docChats=bootMemory.chats.doc||{};}
+if(bootMemory?.chats){ui.featureChats=bootMemory.chats.feature||{};ui.agentChats=bootMemory.chats.agent||{};ui.docChats=bootMemory.chats.doc||{};ui.reviewChats=bootMemory.chats.review||{};}
 let runner=null,timer=null;
 const project=()=>state.projects.find(p=>p.id===state.projectId)||state.projects[0];
 const agentById=id=>state.agents.find(a=>a.id===id);
@@ -11225,18 +11318,37 @@ function conventionLabel(a){
  const lib=c.template?.startsWith('lib:')?state.conventionLibrary.templates.find(t=>'lib:'+t.id===c.template):null,t=lib||convTemplateOf(c.family,c.template),n=(c.subsets||[]).length;
  return(t?t.name+(t.content!==c.base?' (editado)':''):(c.base?.trim()?'Personalizado':'Sem guia'))+(n?` + ${n} subset${n>1?'s':''}`:'');
 }
-/* Tiny, escape-first Markdown renderer for the preview (headings, lists, checkboxes, bold/italic, inline and fenced code). */
+/* Small, escape-first Markdown renderer (previews, chats, DIRETRIZES, delivery review): headings, nested and numbered lists (own
+   start), checkboxes, bold/italic, inline and fenced code, GFM tables, quotes, --- rules and links (http/https only). */
 function renderMarkdown(src){
- const out=[];let list=null,code=null,para=[];
- const inline=t=>E(t).replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/(^|[\s(])\*([^*\s][^*]*)\*/g,'$1<em>$2</em>');
- const flushP=()=>{if(para.length){out.push(`<p>${inline(para.join(' '))}</p>`);para=[];}},flushL=()=>{if(list){out.push(`<${list.tag}>${list.items.map(i=>`<li>${i}</li>`).join('')}</${list.tag}>`);list=null;}};
- for(const line of String(src||'').split('\n')){
+ const out=[],stack=[],lines=String(src||'').replace(/\r/g,'').split('\n');let code=null,para=[];
+ const inline=t=>{const keep=[];const s=E(String(t).replace(/`([^`]+)`/g,(m,c)=>{keep.push(`<code>${E(c)}</code>`);return`\u0000${keep.length-1}\u0000`;})).replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>').replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/(^|[\s(])\*([^*\s][^*]*)\*/g,'$1<em>$2</em>');return s.replace(/\u0000(\d+)\u0000/g,(m,i)=>keep[i]);};
+ const listHTML=l=>`<${l.tag}${l.tag==='ol'&&l.start!==1?` start="${l.start}"`:''}>${l.items.map(i=>`<li>${i}</li>`).join('')}</${l.tag}>`;
+ const closeTo=ind=>{while(stack.length&&stack.at(-1).ind>ind){const l=stack.pop(),h=listHTML(l);if(stack.length){const t=stack.at(-1);t.items[t.items.length-1]+=h;}else out.push(h);}};
+ const flushL=()=>closeTo(-1),flushP=()=>{if(para.length){out.push(`<p>${inline(para.join(' '))}</p>`);para=[];}};
+ const itemRe=/^(\s*)([-*+]|(\d+)[.)])\s+(.*)$/,sepRe=/^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/,cells=l=>{const s=l.trim().replace(/^\|/,'').replace(/(?<!\\)\|$/,''),row=[];let cur='',tick=false;for(let k=0;k<s.length;k++){const ch=s[k];if(ch==='\\'&&s[k+1]==='|'){cur+='|';k++;continue;}if(ch==='`')tick=!tick;if(ch==='|'&&!tick){row.push(cur.trim());cur='';continue;}cur+=ch;}row.push(cur.trim());return row;};
+ for(let i=0;i<lines.length;i++){
+  const line=lines[i];
   if(code){if(/^\s*```/.test(line)){out.push(`<pre><code>${E(code.join('\n'))}</code></pre>`);code=null;}else code.push(line);continue;}
   if(/^\s*```/.test(line)){flushP();flushL();code=[];continue;}
-  const h=line.match(/^(#{1,4})\s+(.+)/);if(h){flushP();flushL();const n=Math.min(6,h[1].length+2);out.push(`<h${n}>${inline(h[2])}</h${n}>`);continue;}
-  const ck=line.match(/^\s*[-*]\s+\[( |x|X)\]\s+(.*)/),ul=line.match(/^\s*[-*]\s+(.*)/),ol=line.match(/^\s*\d+[.)]\s+(.*)/);
-  if(ck||ul||ol){flushP();const tag=ol&&!ul?'ol':'ul';if(!list||list.tag!==tag){flushL();list={tag,items:[]};}list.items.push(ck?`<span class="md-check">${ck[1].trim()?'☑':'☐'}</span> ${inline(ck[2])}`:inline((ul||ol)[1]));continue;}
-  if(!line.trim()){flushP();flushL();continue;}
+  if(/^\s*>/.test(line)){flushP();flushL();const q=[];while(i<lines.length&&/^\s*>/.test(lines[i]))q.push(lines[i++].replace(/^\s*>\s?/,''));i--;out.push(`<blockquote>${renderMarkdown(q.join('\n'))}</blockquote>`);continue;}
+  if(line.includes('|')&&(lines[i+1]||'').includes('|')&&sepRe.test(lines[i+1])){
+   flushP();flushL();const head=cells(line),al=cells(lines[i+1]).map(c=>/^:-+:$/.test(c)?'center':/-:$/.test(c)?'right':/^:/.test(c)?'left':''),rows=[];i+=2;
+   while(i<lines.length&&lines[i].includes('|')&&lines[i].trim())rows.push(cells(lines[i++]));i--;
+   const cell=(tag,c,j)=>`<${tag}${al[j]?` style="text-align:${al[j]}"`:''}>${inline(c)}</${tag}>`;
+   out.push(`<div class="md-table"><table><thead><tr>${head.map((c,j)=>cell('th',c,j)).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${head.map((_,j)=>cell('td',r[j]??'',j)).join('')}</tr>`).join('')}</tbody></table></div>`);continue;
+  }
+  if(/^\s{0,3}(?:(?:-\s*){3,}|(?:\*\s*){3,}|(?:_\s*){3,})$/.test(line)){flushP();flushL();out.push('<hr>');continue;}
+  const h=line.match(/^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$/);if(h){flushP();flushL();const n=Math.min(6,h[1].length+2);out.push(`<h${n}>${inline(h[2])}</h${n}>`);continue;}
+  const li=line.match(itemRe);
+  if(li){
+   flushP();let ind=li[1].replace(/\t/g,'    ').length;const tag=li[3]!=null?'ol':'ul',ck=li[4].match(/^\[( |x|X)\]\s+(.*)/),html=ck?`<span class="md-check">${ck[1].trim()?'☑':'☐'}</span> ${inline(ck[2])}`:inline(li[4]);
+   closeTo(ind);let top=stack.at(-1);if(top&&top.ind<ind&&ind-top.ind<2)ind=top.ind;
+   if(top&&top.ind===ind&&top.tag!==tag){closeTo(ind-1);top=stack.at(-1);}
+   if(top&&top.ind===ind)top.items.push(html);else stack.push({tag,ind,start:li[3]!=null?+li[3]:1,items:[html]});continue;
+  }
+  if(!line.trim()){flushP();if(stack.length){const next=lines.slice(i+1).find(l=>l.trim());if(!next||!(itemRe.test(next)||/^\s{2,}\S/.test(next)))flushL();}continue;}
+  if(stack.length&&/^\s{2,}\S/.test(line)){const t=stack.at(-1);t.items[t.items.length-1]+=' '+inline(line.trim());continue;}
   flushL();para.push(line.trim());
  }
  if(code)out.push(`<pre><code>${E(code.join('\n'))}</code></pre>`);flushP();flushL();return out.join('');
@@ -11739,7 +11851,7 @@ function kanbanHTML(){
 function openOpsSection(id){if(ui.modal)closeModal();ui.opsNew=null;ui.view='projects';render();requestAnimationFrame(()=>document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'}));}
 function openOpsFeature(key){ui.opsFeature=key;ui.opsFeatureDraft=null;openOpsSection('opsFeatures');}
 function openFeatures(){openOpsSection('opsFeatures');}
-function refreshFeatureModal(){if(ui.view==='projects'){renderProjectsPage();return;}if(ui.modal==='features'){const root=$('#kanbanRoot');if(root){const scroll=root.scrollLeft;root.innerHTML=kanbanHTML();root.scrollLeft=scroll;const run=$('.modal-toolbar [data-action=run]');if(run)run.innerHTML=icon(runner?runControl().icon:'play')+(runner?runControl().label:(liveMode()?'Iniciar operação':'Iniciar demo'));$$('.modal-toolbar [data-action=feature-new],.modal-toolbar [data-action=distribute]').forEach(el=>el.disabled=!!runner);const stop=$('.modal-toolbar [data-action=stop]');if(stop)stop.hidden=!runner;}}}
+function refreshFeatureModal(){refreshReviewEditor();if(ui.view==='projects'){renderProjectsPage();return;}if(ui.modal==='features'){const root=$('#kanbanRoot');if(root){const scroll=root.scrollLeft;root.innerHTML=kanbanHTML();root.scrollLeft=scroll;const run=$('.modal-toolbar [data-action=run]');if(run)run.innerHTML=icon(runner?runControl().icon:'play')+(runner?runControl().label:(liveMode()?'Iniciar operação':'Iniciar demo'));$$('.modal-toolbar [data-action=feature-new],.modal-toolbar [data-action=distribute]').forEach(el=>el.disabled=!!runner);const stop=$('.modal-toolbar [data-action=stop]');if(stop)stop.hidden=!runner;}}}
 /* Feature editor (modal) with co-writing by the squad's Reconhecedor PRD: the person talks in natural language, the agent
    fills Escopo, Critérios and Tarefas through the bridge (claude -p, no tools) and every change can be undone. */
 const FE_FIELD_ID={title:'featureTitle',description:'featureDescription',criteria:'featureCriteria',tasks:'featureTasks',briefing:'docBriefing',vision:'docVision',scopeIn:'docScopeIn',scopeOut:'docScopeOut',glossary:'docGlossary',architecture:'docArchitecture',adrs:'docAdrList'},FE_FIELD_LABEL={dependencies:'Dependências',title:'Título',description:'Escopo',criteria:'Critérios',tasks:'Tarefas',briefing:'Briefing',vision:'Visão do produto',scopeIn:'Dentro do escopo',scopeOut:'Fora do escopo',glossary:'Glossário',architecture:'Visão geral',adrs:'ADRs'};
@@ -11750,8 +11862,7 @@ const CHAT_RUN={tools:[],allowedTools:[],mcpServers:undefined,permissionMode:'do
 function coWriterAgent(){const p=project(),q=squadById(p.squadId);return agentById(q?.prdId)||agentById(q?.commanderId)||agentById(p.commanderId)||null;}
 function featureDraftFor(featureId,sprintId){const p=project(),f=featureById(featureId),sid=(sprintById(sprintId,p)||sprintById(ui.opsLast?.sprintId,p)||currentSprint(p))?.id||'',maxKey=Math.max(0,...p.features.map(x=>parseInt(x.key.replace(/\D/g,''),10)||0));return{key:f?f.id:'new',feature:f?clone(f):createFeature('',maxKey+1,{criteria:'',scope:ui.opsLast?.scope&&ui.opsLast.scope!=='setup'?ui.opsLast.scope:'fullstack',priority:ui.opsLast?.priority||'P1',sprintId:sid,dependencies:setupOf(p)?[setupOf(p).id]:[]}),isNew:!f};}
 function openFeatureEditor(featureId,sprintId){
- if(!guardMutation())return;const existing=featureById(featureId);if(!existing&&project().features.length>=150)return toast('Limite de 150 features por projeto.','error');
- if(existing&&['done','review','running'].includes(existing.status))return openOpsFeature(existing.id);
+ const existing=featureById(featureId);if(existing&&['done','review','running'].includes(existing.status))return openReviewEditor(existing.id);if(!guardMutation())return;if(!existing&&project().features.length>=150)return toast('Limite de 150 features por projeto.','error');
  ui.opsFeature=null;render();
  ui.opsFeatureDraft=featureDraftFor(existing?.id,sprintId);ui.featureChat=newFeatureChat(existing?.id||'new');
  const d=ui.opsFeatureDraft,f=d.feature,p=project();
@@ -11763,7 +11874,7 @@ function featureEditorHTML(f){
  return`<div class="fe-layout"><form id="featureForm" class="fe-form" novalidate>
 <input id="featureTitle" class="fe-title" name="title" value="${E(f.title)}" maxlength="120" placeholder="Título da feature" autocomplete="off" autofocus aria-label="Título da feature">
 <div class="fe-meta"><label class="fe-select"><span>ÁREA</span><select id="featureScope" name="scope">${Object.entries(SCOPES).filter(([k])=>k!=='setup'||f.setup).map(([k,l])=>`<option value="${k}" ${f.scope===k?'selected':''}>${E(l)}</option>`).join('')}</select></label><label class="fe-select"><span>PRIORIDADE</span><select id="featurePriority" name="priority">${PRIORITIES.map(([v,l])=>`<option value="${v}" ${f.priority===v?'selected':''}>${l}</option>`).join('')}</select></label><label class="fe-select"><span>SPRINT</span><select id="featureSprint" name="sprintId"${f.setup?' disabled title="O setup do projeto fica sempre na primeira sprint."':''}>${project().sprints.map(s=>`<option value="${E(s.id)}" ${sprintOf(f)===s?'selected':''}>${E(sprintCode(s))} / ${E(s.name)}</option>`).join('')}</select></label></div>
-${FE_MD.map(def=>feMdFieldHTML(def,f[def.field]||'')).join('')}
+${f.rework?`<div class="notice warning rv-rework-note">${icon('info')}<div><b>Ajustes pedidos na revisão de ${E(feClock(f.rework.at))}</b><small>A próxima execução recebe estes comentários.</small>${reworkHTML(f.rework)}</div></div>`:''}${FE_MD.map(def=>feMdFieldHTML(def,f[def.field]||'')).join('')}
 <details class="fe-deps"${f.dependencies.some(x=>!featureById(x)?.setup)?' open':''}><summary>DEPENDÊNCIAS <small id="feDepSummary">${depKeys.length?E(depKeys.join(', ')):'nenhuma'}</small></summary><div class="fe-dep-list">${f.setup?'<p class="hint">O setup do projeto é a primeira feature da Sprint 01: não depende de nenhuma outra, e todas as outras dependem dele.</p>':others.map(x=>`<label class="fe-dep"${x.setup?' title="Toda feature depende do setup do projeto."':''}><input type="checkbox" name="dependencies" value="${E(x.id)}" ${f.dependencies.includes(x.id)||x.setup?'checked':''}${x.setup?' disabled':''}><span><b>${E(x.key)}</b> ${E(x.title)}</span></label>`).join('')||'<p class="hint">Nenhuma outra feature neste projeto.</p>'}</div></details>
 </form>${feChatHTML(a,model,live)}</div>`;
 }
@@ -11790,7 +11901,7 @@ function feMdTool(ta,tool){
 }
 // Single path for programmatic changes (agent replies, undo): value + render + expand + highlight.
 function setFeField(field,value,opts={}){
- const el=document.getElementById(FE_FIELD_ID[field]);if(!el)return;el.value=value;autoGrow(el);const sec=el.closest('.fe-md');if(!sec){flashField(el);if(opts.write)el.scrollIntoView({block:'nearest',behavior:feReduced()?'auto':'smooth'});return;}
+ const el=document.getElementById(feFieldId(field));if(!el)return;el.value=value;autoGrow(el);if(el.classList.contains('rv-input'))el.closest('.rv-sec')?.classList.remove('collapsed');const sec=el.classList.contains('rv-input')?null:el.closest('.fe-md');if(!sec){flashField(el);if(opts.write)el.scrollIntoView({block:'nearest',behavior:feReduced()?'auto':'smooth'});return;}
  sec.classList.remove('collapsed');sec.querySelector('[data-action="fe-collapse"]')?.setAttribute('aria-expanded','true');if(document.activeElement!==el&&value.trim())feMdMode(sec,'view');else feMdRefresh(sec);
  sec.classList.remove('fe-updated');void sec.offsetWidth;sec.classList.add('fe-updated');setTimeout(()=>sec.classList.remove('fe-updated'),1800);
  if(opts.write&&!feReduced()){const view=sec.querySelector('.fe-md-view'),parts=[...view.querySelectorAll('p,li,h3,h4,h5,h6,pre')];parts.forEach((n,i)=>n.style.setProperty('--i',i));view.classList.remove('fe-writing');void view.offsetWidth;view.classList.add('fe-writing');
@@ -11819,14 +11930,14 @@ function coWriteRoleTag(a){return a?.role==='po'?'RECONHECEDOR PRD':a?.role==='a
 function feChatHTML(a,model,live,opts={}){
  const name=E(a?.name||opts.none||'SEM AGENTE PRD'),send='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5.5 11.5 12 5l6.5 6.5"/></svg>';
  // Header unchanged (avatar, name + model chip, role); only the conversation below follows the iMessage style.
- return`<aside class="fe-chat" aria-label="Conversa com ${name}"><header class="fe-chat-head">${a?`<img src="${portrait(a)}" alt="">`:''}<div><div class="fe-chat-id"><strong>${name}</strong>${a?`<span class="fe-model" title="${E(model.title)}">${E(model.label)}</span>${effortChipHTML(model.effort)}`:''}</div><small>CO-ESCRITA · ${E(coWriteRoleTag(a))}</small></div></header>
+ return`<aside class="fe-chat" aria-label="Conversa com ${name}"><header class="fe-chat-head">${a?`<img src="${portrait(a)}" alt="">`:''}<div><div class="fe-chat-id"><strong>${name}</strong>${a?`<span class="fe-model" title="${E(model.title)}">${E(model.label)}</span>${effortChipHTML(model.effort)}`:''}</div><small>${opts.tag||'CO-ESCRITA'} · ${E(coWriteRoleTag(a))}</small></div></header>
 <div class="fe-msgs" id="feMsgs" aria-live="polite"></div><button type="button" class="fe-jump" id="feJump" data-action="fe-jump" hidden>Nova mensagem ↓</button>
 ${live&&a?`<div class="fe-compose"><div class="fe-suggest" id="feSuggest">${(opts.quick||FE_QUICK).map(([l,t])=>`<button type="button" data-action="fe-quick" data-text="${E(t)}">${l}</button>`).join('')}</div><div class="fe-pill"><textarea id="feChatInput" rows="1" maxlength="4000" placeholder="Mensagem para ${name}" aria-label="Mensagem para ${name}"></textarea><button type="button" class="fe-send" data-action="fe-send" aria-label="Enviar" title="Enviar (Enter)" disabled>${send}</button></div></div>`:`<div class="fe-compose offline"><p class="fe-note">${a?'A conversa usa o Claude Code pelo bridge. Rode <code>npm start</code> e abra <code>http://127.0.0.1:4317</code> com a execução ligada. O formulário funciona normalmente sem ele.':E(opts.missing||'A squad desta operação não tem agente PRD.')}</p></div>`}</aside>`;
 }
 function feFootHTML(m){
  const out=[];
- if(m.editing)out.push(`<span class="fe-editing">✎ editando ${FE_FIELD_LABEL[m.editing]}…</span>`);
- else if(m.updated?.length)out.push(`<span class="fe-edits">${m.updated.map(k=>`<button type="button" class="fe-field-chip" data-action="fe-field" data-field="${k}">${FE_FIELD_LABEL[k]}</button>`).join('')}${m.prev?`<button type="button" class="link-button" data-action="fe-undo" data-mid="${m.id}">Desfazer</button>`:'<em>desfeito</em>'}</span>`);
+ if(m.editing)out.push(`<span class="fe-editing">✎ editando ${feFieldLabel(m.editing)}…</span>`);
+ else if(m.updated?.length)out.push(`<span class="fe-edits">${m.updated.map(k=>`<button type="button" class="fe-field-chip" data-action="fe-field" data-field="${k}">${feFieldLabel(k)}</button>`).join('')}${m.prev?`<button type="button" class="link-button" data-action="fe-undo" data-mid="${m.id}">Desfazer</button>`:'<em>desfeito</em>'}</span>`);
  const meta=[m.cost!=null?`US$ ${Number(m.cost).toFixed(4).replace('.',',')}`:'',m.secs?`${m.secs} s`:''].filter(Boolean).join(' · ');
  if(meta)out.push(`<small class="fe-meta-line">${meta}</small>`);
  return out.join('');
@@ -11846,8 +11957,8 @@ function feTimeBefore(list,i){const m=list[i],p=list[i-1];return p&&m.at-p.at>5*
 function chatNow(){return ui.modal==='agent-chat'?ui.agentChat:ui.modal==='teams'?ui.docChat:ui.featureChat;}
 /* Chats between openings (ui.featureChats / agentChats / docChats) and, with the bridge, in the database (PUT /api/chats/:kind/:key):
    each turn 800 ms after the last change, at once when the chat closes, by beacon when the page closes. */
-const CHAT_MAPS={feature:'featureChats',agent:'agentChats',doc:'docChats'},chatSaveQ=new Map();let chatSaveTimer=0;
-function chatKey(c){return c?.kind==='feature'?(c.featureId&&c.featureId!=='new'?c.featureId:''):c?.kind==='doc'?c.key||'':c?.kind==='agent'?c.agentId||'':'';}
+const CHAT_MAPS={feature:'featureChats',review:'reviewChats',agent:'agentChats',doc:'docChats'},chatSaveQ=new Map();let chatSaveTimer=0;
+function chatKey(c){return c?.kind==='feature'||c?.kind==='review'?(c.featureId&&c.featureId!=='new'?c.featureId:''):c?.kind==='doc'?c.key||'':c?.kind==='agent'?c.agentId||'':'';}
 // What a chat keeps: no live bubble, undo snapshot or retry handle; an agent chat's old options are spent.
 function chatSnapshot(c){
  const msgs=c.messages.filter(m=>!m.live);
@@ -11860,7 +11971,7 @@ function chatPersist(c){if(!diskSync.on||!chatKey(c))return;chatSaveQ.set(c.kind
 function chatFlush(leaving=false){
  clearTimeout(chatSaveTimer);chatSaveTimer=0;
  for(const [qid,c] of chatSaveQ){chatSaveQ.delete(qid);const key=chatKey(c);if(!key||!c.messages.length)continue;
-  const url=`/api/chats/${c.kind}/${encodeURIComponent(key)}`,body=JSON.stringify({projectId:c.kind==='feature'?project().id:null,data:chatSnapshot(c)});
+  const url=`/api/chats/${c.kind}/${encodeURIComponent(key)}`,body=JSON.stringify({projectId:c.kind==='feature'||c.kind==='review'?project().id:null,data:chatSnapshot(c)});
   if(leaving&&navigator.sendBeacon&&body.length<60000&&navigator.sendBeacon(`${url}?token=${BRIDGE_TOKEN}`,new Blob([body],{type:'application/json'})))continue;
   bridgeFetch(url,{method:'PUT',body,keepalive:leaving&&body.length<60000}).catch(()=>{});}
 }
@@ -11930,7 +12041,7 @@ function chatRefresh(m){const box=$('#feMsgs'),row=box?.querySelector(`[data-mid
 async function applyCoWrite(result,cost,meta={}){
  const c=ui.featureChat;if(!c)return null;const {reply,data}=parseCoWrite(result),changes=[];
  const asList=(items,check)=>items.map(x=>String(x).trim().replace(/^•\s*/,'- ')).filter(Boolean).map(x=>check?(/^[-*]\s+\[[ xX]\]\s/.test(x)?x:`- [ ] ${x.replace(/^(?:[-*]|\d+[.)])\s+/,'')}`):(/^(?:[-*]|\d+[.)])\s/.test(x)?x:`- ${x}`)).join('\n');
- if(data&&typeof data==='object')for(const [k,field] of [['title','title'],['scope','description'],['criteria','criteria'],['tasks','tasks']]){if(!(k in data))continue;const raw=data[k],v=Array.isArray(raw)?(field==='title'?raw.join(' ').trim():asList(raw,field==='tasks')):typeof raw==='string'?raw.trim():null;const el=document.getElementById(FE_FIELD_ID[field]);if(v===null||!el||el.value.trim()===v)continue;changes.push({field,value:v.slice(0,el.maxLength>0?el.maxLength:8000)});}
+ if(data&&typeof data==='object')for(const [k,field] of [['title','title'],['scope','description'],['criteria','criteria'],['tasks','tasks']]){if(!(k in data))continue;const raw=data[k],v=Array.isArray(raw)?(field==='title'?raw.join(' ').trim():asList(raw,field==='tasks')):typeof raw==='string'?raw.trim():null;const el=document.getElementById(feFieldId(field));if(v===null||!el||el.value.trim()===v)continue;changes.push({field,value:v.slice(0,el.maxLength>0?el.maxLength:8000)});}
  if(data&&typeof data==='object'&&Array.isArray(data.dependencies)){const ids=feDepIds(data.dependencies);if(ids){const cur=feDepChecked();if(ids.length!==cur.length||ids.some(i=>!cur.includes(i)))changes.push({field:'dependencies',value:ids});}}
  return chatApply(c,reply,data,changes,cost,meta);
 }
@@ -11955,7 +12066,7 @@ async function chatApply(c,reply,data,changes,cost,meta){
  for(const [i,ch] of changes.entries()){
   await feWait(i?gap:340);if(chatNow()!==c)return m;
   m.editing=ch.field;chatFooter(m);
-  if(ch.field==='adrs'){prev.adrs=adrValues($('#docAdrList'));applyDocAdrs(ch.value);}else if(ch.field==='dependencies'){prev.dependencies=feDepChecked();setFeDeps(ch.value);}else{prev[ch.field]=document.getElementById(FE_FIELD_ID[ch.field])?.value??'';setFeField(ch.field,ch.value,{write:true});}m.updated.push(ch.field);
+  if(ch.field==='adrs'){prev.adrs=adrValues($('#docAdrList'));applyDocAdrs(ch.value);}else if(ch.field==='dependencies'){prev.dependencies=feDepChecked();setFeDeps(ch.value);}else{prev[ch.field]=document.getElementById(feFieldId(ch.field))?.value??'';setFeField(ch.field,ch.value,{write:true});}m.updated.push(ch.field);
   teamsShow(c,meta.agent,ch.field);
  }
  m.editing=null;m.prev=changes.length?prev:null;chatFooter(m);return m;
@@ -11976,7 +12087,7 @@ async function runCoWrite(msgs){
    const turn={i,crew,round};
    try{
     // Chat runs: no tools and no plan mode (its planning flow slowed replies and made the model fake tool calls); text streams live.
-    const started=await bridgeFetch('/api/runs',{method:'POST',body:JSON.stringify({prompt:doc?docCoWritePrompt(a,c,msgs,turn):coWritePrompt(a,msgs),systemPrompt:agentSystemPrompt(a)+'\n\n'+[soulBlock(a,chatGreeting(c,a)),doc?docCoWriteSystem(doc,a,c,turn):COWRITE_SYSTEM].filter(Boolean).join('\n\n'),label:doc?`${a.name} / co-escrita ${doc.title.toLowerCase()}`:`${a.name} / co-escrita ${ui.opsFeatureDraft?.feature.key||''}`,meta:runMeta(doc&&ui.opsNew?null:project(),a,doc?null:ui.opsFeatureDraft?.feature,doc?'doc':'cowrite'),options:{...runOptionsFor(a,runtime(),doc&&ui.opsNew?null:project()),...CHAT_RUN,...(doc&&!ui.opsNew&&kickoffPlanOwner(a)?{timeoutSec:480}:{})}})});
+    const started=await bridgeFetch('/api/runs',{method:'POST',body:JSON.stringify({prompt:doc?docCoWritePrompt(a,c,msgs,turn):c.kind==='review'?reviewChatPrompt(a,msgs):coWritePrompt(a,msgs),systemPrompt:agentSystemPrompt(a)+'\n\n'+[soulBlock(a,chatGreeting(c,a)),doc?docCoWriteSystem(doc,a,c,turn):c.kind==='review'?REVIEW_CHAT_SYSTEM:COWRITE_SYSTEM].filter(Boolean).join('\n\n'),label:doc?`${a.name} / co-escrita ${doc.title.toLowerCase()}`:c.kind==='review'?`${a.name} / revisão ${featureById(c.featureId)?.key||''}`:`${a.name} / co-escrita ${ui.opsFeatureDraft?.feature.key||''}`,meta:runMeta(doc&&ui.opsNew?null:project(),a,doc?null:c.kind==='review'?featureById(c.featureId):ui.opsFeatureDraft?.feature,doc?'doc':c.kind==='review'?'chat':'cowrite'),options:{...runOptionsFor(a,runtime(),doc&&ui.opsNew?null:project()),...CHAT_RUN,...(doc&&!ui.opsNew&&kickoffPlanOwner(a)?{timeoutSec:480}:{})}})});
     if(!mine()){bridgeFetch(`/api/runs/${started.runId}/cancel`,{method:'POST'}).catch(()=>{});return;}
     c.runId=started.runId;c.read=true;chatReceipt();chatTyping(true);
     // The tile goes from "pensando" to "falando" with the first words; a screen still shared by a colleague goes back to the gallery.
@@ -11984,7 +12095,7 @@ async function runCoWrite(msgs){
     if(!mine())return;
     const lm=live.stop();c.runId=null;chatTyping(false);const secs=Math.max(1,Math.round((Date.now()-c.started)/1000));
     if(exit.isError){if(lm)chatSettle(lm,{});chatPush(exit.status==='cancelled'?{role:'system',text:'Resposta interrompida.'}:{role:'system',text:`Não consegui responder: ${exit.error||'falha na execução do Claude Code.'}`,error:true,retry:msgs.map(x=>x.id)});break;}
-    const out={},m=await (doc?applyDocWrite:applyCoWrite)(exit.result||'',exit.costUsd,{secs,m:lm,agent:c.group?a:null,out});
+    const out={},m=await (doc?applyDocWrite:c.kind==='review'?applyReviewWrite:applyCoWrite)(exit.result||'',exit.costUsd,{secs,m:lm,agent:c.group?a:null,out});
     if(!mine())return;
     round.push({agent:a,mid:m?.id,text:m?.text||'',updated:m?.updated||[],to:out.next?.id||'',brief:out.brief||''});
     // A guest leaves once it delivered (it waits when it asked the person something); a host can call guests, who speak next.
@@ -12115,7 +12226,7 @@ function docCoWriteSystem(def,a,c,turn){
   '- Nas listas, escreva só o texto de cada item, sem marcadores.','- Parta do conteúdo atual dos documentos: preserve o que a pessoa escreveu e mude só o necessário. Cada valor do JSON substitui o campo inteiro.','- Use o briefing, as features e os outros documentos do projeto como contexto, sem contradizê-los.',`- Siga as suas diretrizes de ${fam==='adr'?'ADR e arquitetura':fam==='commander'?'comando':'PRD'}.`].filter(Boolean).join('\n');
 }
 // Agenda of the meetup from the Documentos tab (filled like projectGaps checks it): top bar chips and "## Pauta" of the prompt.
-function teamsValue(field){return String(document.getElementById(FE_FIELD_ID[field])?.value||'').trim();}
+function teamsValue(field){return String(document.getElementById(feFieldId(field))?.value||'').trim();}
 function teamsAgenda(){const adrs=adrValues($('#docAdrList')),okAdrs=adrs.length&&adrs.every(x=>x.title.trim()&&x.content.trim());return TEAMS_AGENDA.map(([key,label,fields,withAdrs])=>{const filled=fields.every(f=>teamsValue(f));let detail=fields.map(f=>feCount(f,teamsValue(f))).join(' / ');if(withAdrs)detail+=` · ${adrs.length?`${adrs.length} ADR${adrs.length>1?'s':''}${okAdrs?'':' (incompleto)'}`:'nenhum ADR'}`;return{key,label,field:fields[0],done:filled&&(!withAdrs||okAdrs),detail};});}
 function docCoWritePrompt(a,c,msgs,turn){
  const def=PROJECT_DOCS[c.doc],pf=$('#projectForm'),cur=ui.opsNew||project(),q=docSquad(),fv=k=>String(pf?.elements.namedItem(k)?.value??cur[k]??'').trim(),mv=el=>(document.getElementById(el)?.value||'').trim(),num=i=>'ADR-'+String(i+1).padStart(3,'0');
@@ -12197,7 +12308,7 @@ function teamsTab(tab){
  const root=$('#atRoot');if(!root)return;root.dataset.tab=tab;root.querySelectorAll('[data-pane]').forEach(p=>p.hidden=p.dataset.pane!==tab);root.querySelectorAll('[data-action="teams-tab"]').forEach(b=>{const on=b.dataset.tab===tab;b.classList.toggle('on',on);b.setAttribute('aria-selected',String(on));});
  if(tab==='docs')$$('#docForm .fe-area').forEach(autoGrow);else{const u=$('#atUnread');if(u)u.hidden=true;const box=$('#feMsgs');if(box)box.scrollTop=box.scrollHeight;$('#feChatInput')?.focus();}
 }
-function teamsAgendaOpen(field){teamsTab('docs');const el=field==='architecture'?document.getElementById(FE_FIELD_ID.architecture)?.closest('.fe-md'):document.getElementById(FE_FIELD_ID[field])?.closest('.fe-md');if(!el)return;el.classList.remove('collapsed');el.scrollIntoView({block:'start',behavior:feReduced()?'auto':'smooth'});el.classList.remove('fe-updated');void el.offsetWidth;el.classList.add('fe-updated');setTimeout(()=>el.classList.remove('fe-updated'),1400);}
+function teamsAgendaOpen(field){teamsTab('docs');const el=field==='architecture'?document.getElementById(FE_FIELD_ID.architecture)?.closest('.fe-md'):document.getElementById(feFieldId(field))?.closest('.fe-md');if(!el)return;el.classList.remove('collapsed');el.scrollIntoView({block:'start',behavior:feReduced()?'auto':'smooth'});el.classList.remove('fe-updated');void el.offsetWidth;el.classList.add('fe-updated');setTimeout(()=>el.classList.remove('fe-updated'),1400);}
 // Scripted opening (no run): after the greetings the commander presents the agenda by what is missing.
 function teamsOpening(c){
  if(chatNow()!==c||c.messages.length||c.busy)return;const a=agentById(c.group?.[0]||c.agentId);if(!a)return;
@@ -12459,7 +12570,7 @@ async function agentChatAct(c,a,opt,arg){
    if(fs.some(x=>x.status==='ready'&&x.route.length&&depsReady(x)))return go(live?`Iniciando ${s.name} com o Claude Code!`:`Iniciando ${s.name} em modo demonstração!`,()=>{closeModal();startRun();});
    return say(`Nenhuma feature de ${s?.name||'sprint atual'} está pronta para executar agora. Confira as revisões e as dependências.`,{options:[fs.some(x=>x.status==='review')&&{id:'reviews',label:'Revisões pendentes'},p.features.some(x=>x.status==='backlog')&&{id:'distribute',label:'Distribuir features'}]});}
   case 'reviews':{const l=p.features.filter(x=>x.status==='review');return l.length?say('Estas entregas aguardam a sua revisão:',{list:l.map(x=>acFeatureRow(x,'review-open'))}):say('Nenhuma entrega aguardando revisão.');}
-  case 'review-open':return f?go(`Abrindo a ${f.key} para revisão.`,()=>openOpsFeature(f.id)):missing();
+  case 'review-open':return f?go(`Abrindo a ${f.key} para revisão.`,()=>openReview(f.id)):missing();
   case 'open-briefing':return go('Abrindo o briefing da operação.',()=>openOpsSection('opsBriefing'));
   // Operators
   case 'mine':{const l=p.features.filter(x=>x.route.includes(a.id));return l.length?say('Essas estão na minha rota:',{list:l.map(x=>acFeatureRow(x,'mine-pick'))}):say('Nenhuma feature na minha rota ainda. O comandante distribui as features no plano.',{options:[{id:'spawn',label:'Spawn individual'}]});}
@@ -12701,14 +12812,16 @@ function buildStepPrompt(f,a,p){
   `## Briefing do projeto\n${p.briefing||'(sem briefing)'}`,
   hasFigma(a)&&(p.figmaUrl||p.figmaFolder)?figmaStepBlock(a,p):'',
   `## Sua atribuição\nVocê é ${a.name}, ${roleLabel(a)}. Etapa ${f.step+1} de ${f.route.length} da rota: ${route.map(x=>x?.name||'?').join(' > ')}.`,
-  `## Feature ${f.key}: ${f.title}\nPrioridade: ${f.priority} / Área: ${SCOPES[f.scope]}${sp?` / Sprint: ${sp.name}${sp.goal?`\nObjetivo da sprint: ${sp.goal}`:''}`:''}\n\nEscopo:\n${f.description||'(não detalhado)'}\n\nCritérios de aceitação:\n${f.criteria}`,
+  `## Feature ${f.key}: ${f.title}\nPrioridade: ${f.priority} / Área: ${SCOPES[f.scope]}${sp?` / Sprint: ${sp.name}${sp.goal?`\nObjetivo da sprint: ${sp.goal}`:''}`:''}\n\nEscopo:\n${f.description||'(não detalhado)'}\n\nCritérios de aceitação (numerados):\n${featureNumbered(f.criteria)||f.criteria}${featureItems(f.tasks).length?`\n\nTarefas (numeradas; [x] = já marcada como feita):\n${featureNumbered(f.tasks,true)}`:''}`,
+  f.rework?reworkBlock(f.rework):'',
   deps?`## Dependências já aprovadas\n${deps}`:'',
   ['commander','po','architect'].includes(a.role)&&p.features.some(x=>x.id!==f.id)?`## Panorama do projeto (todas as sprints e features)\n${projectPanorama(p,{skip:f.id})}`:'',
   f.context?`## Contexto de handoff registrado\n${clip(f.context,6000)}`:'',
   previous?`## Entregas anteriores nesta rota\n${previous}`:'',
   brief?`## Instrução do comandante para você\n${brief}`:'',
   mates.length?`## Colegas que você pode chamar\nUse a ferramenta Agent com subagent_type igual ao identificador para pedir a um colega uma decisão, uma revisão ou uma parte que é da especialidade dele. Explique no pedido o que precisa e o contexto. O colega trabalha na mesma pasta, com as ferramentas dele, e devolve a resposta para você. Não delegue a sua etapa inteira.\n${mates.join('\n')}`:'',
-  `## Entrega esperada\nSiga rigorosamente o guia de convenções e boas práticas anexado às suas instruções. Trabalhe na pasta desta operação, que é o diretório de trabalho atual (projects/${p.folder}): todo código, teste e documento da implementação fica dentro dela, e nada fora dela deve ser criado ou alterado. Execute a sua parte respeitando o seu papel. Não declare testes ou verificações que não executou.\n${next?`Ao terminar, responda com um resumo de handoff para ${next.name} (${roleLabel(next)}): o que foi feito, arquivos alterados, decisões, pendências e o próximo passo.`:'Você é a última etapa. Responda com um relatório para a revisão humana: o que foi entregue, arquivos alterados, evidências de verificação executadas, lacunas e riscos. Termine o relatório com a seção "## Cenários de teste humano": passos que uma pessoa executa à mão para validar a feature (onde abrir, o que fazer, o resultado esperado), um cenário por critério de aceitação e ao menos um de erro ou borda, sem repetir comandos de lint, typecheck ou teste automatizado.'}\nResponda em português do Brasil.`
+  `## Entrega esperada\nSiga rigorosamente o guia de convenções e boas práticas anexado às suas instruções. Trabalhe na pasta desta operação, que é o diretório de trabalho atual (projects/${p.folder}): todo código, teste e documento da implementação fica dentro dela, e nada fora dela deve ser criado ou alterado. Execute a sua parte respeitando o seu papel. Não declare testes ou verificações que não executou.\n${next?`Ao terminar, responda com um resumo de handoff para ${next.name} (${roleLabel(next)}): o que foi feito, arquivos alterados, decisões, pendências e o próximo passo.`:'Você é a última etapa. Responda com um relatório para a revisão humana: o que foi entregue, arquivos alterados, evidências de verificação executadas, lacunas e riscos. Termine o relatório com a seção "## Cenários de teste humano": passos que uma pessoa executa à mão para validar a feature (onde abrir, o que fazer, o resultado esperado), um cenário por critério de aceitação e ao menos um de erro ou borda, sem repetir comandos de lint, typecheck ou teste automatizado.'}\nResponda em português do Brasil.`,
+  reportContract(!next)
  ].filter(Boolean).join('\n\n');
 }
 function newConsole(meta){const c={id:meta.runId||id('console'),lines:[],status:'running',startedAt:nowISO(),...meta};ui.consoles.push(c);if(ui.consoles.length>12)ui.consoles.shift();ui.consoleId=c.id;return c;}
@@ -13108,7 +13221,7 @@ function launchNext(preferredId=null){
   log(s?tag+(review?'execução aguardando revisão humana.':'nenhuma feature pronta para executar.'):review?'Execução simulada aguardando revisão humana.':'Nenhuma feature pronta para simular.','system');save();render();refreshFeatureModal();toast(s?tag+(review?'entregas aguardam sua revisão.':'fila da sprint encerrada.'):review?'Entregas aguardam sua revisão na tela de Features.':'Fila da simulação encerrada.');return;
  }
  if(!f.route.every(id=>p.agentIds.includes(id)&&agentById(id))){f.route=[];f.briefs=[];f.status='backlog';runner=null;roomTyping(null);roomPush({kind:'system',text:`A rota da ${f.key} tem um agente que saiu da squad. Redistribua a feature.`,tone:'error'});notify('route-broken',{p,f,title:`${f.key}: rota com agente fora da squad`,text:'A execução parou. Redistribua a feature para rodar de novo.'});save();render();return toast('A rota contem um agente indisponível. Redistribua a feature.','error');}
- f.status='running';f.step=0;f.currentAgentId=f.route[0];f.runStart=f.outputs.length;runner.featureId=f.id;
+ f.status='running';f.step=0;f.currentAgentId=f.route[0];f.runStart=f.outputs.length;f.runAt=nowISO();runner.featureId=f.id;
  log(`${agentById(cmdId)?.name||'COMANDANTE'} atribuiu ${f.key} a ${agentById(f.currentAgentId).name}.`,'plan',cmdId);log(`${f.key}: briefing e contexto recebidos. Etapa 1/${f.route.length}.`,'agent',f.currentAgentId);
  if(runner.kind!=='spawn')roomPush({kind:'say',agentId:cmdId,featureKey:f.key,ops:'brief',to:f.route[0],text:`${agentById(f.route[0]).name}, a ${f.key} (${f.title}) começa com você. Rota: ${f.route.map(id=>agentById(id)?.name).join(' > ')}.`});
  roomStepStart(f,null);save();render();refreshFeatureModal();scheduleStep(simulationStep);
@@ -13120,8 +13233,9 @@ function simulationStep(){
  while(s.i<s.beats.length-1){simBeat(s,s.beats[s.i++]);const w=officeLive();if(w)return scheduleStep(simulationStep,w==='office'?Math.max(400,state.settings.stepMs*.6):Math.max(350,state.settings.stepMs*.4));}
  runner.sim=null;
  const texts={po:'Escopo e critérios organizados para o handoff de requisitos.',architect:'Contratos e fronteiras de componentes organizados para orientar a implementação.',backend:'Plano de API, validações e persistência preparado.',frontend:'Estados de interface e pontos de integracao organizados.',designer:'Fluxo, telas e estados especificados para quem implementa a interface.',qa:'Checklist de verificação preparado para revisão humana.',commander:'Briefing decomposto em responsabilidades para o squad.'};
- const text=`[SIMULAÇÃO / SEM CÓDIGO EXECUTADO]\n${texts[roleFamilyOf(a)]||texts[a.role]||'Parte da especialidade organizada para o próximo agente.'}\n\nFeature: ${f.title}\nCriterios: ${f.criteria}\n\nEste e um registro ilustrativo. Nenhum arquivo foi escrito, teste executado ou resultado real verificado.`;
- f.outputs.push({agentId:a.id,at:nowISO(),text,simulated:true,error:false,costUsd:null,durationMs:null,sessionId:null});if(f.outputs.length>300)f.outputs.shift();
+ const last=f.step+1>=f.route.length,report=simReport(f,a,last),line=x=>`- ${x}`;
+ const text=[`**[SIMULAÇÃO / SEM CÓDIGO EXECUTADO]**`,texts[roleFamilyOf(a)]||texts[a.role]||'Parte da especialidade organizada para o próximo agente.',`### O que foi feito\n${report.done.map(line).join('\n')}`,report.notDone.length?`### Não feito\n${report.notDone.map(x=>`- ${x.item}: ${x.reason}`).join('\n')}`:'',`### Próximo passo\n${report.next.map(line).join('\n')}`,last?`## Cenários de teste humano\n${report.scenarios.map(line).join('\n')||'- Nenhum critério numerado.'}`:'','> Registro ilustrativo: nenhum arquivo foi escrito, teste executado ou resultado real verificado.'].filter(Boolean).join('\n\n');
+ f.outputs.push({agentId:a.id,at:nowISO(),text,simulated:true,error:false,costUsd:null,durationMs:null,sessionId:null,...(report?{report}:{})});if(f.outputs.length>300)f.outputs.shift();
  roomTyping(null);simBeat(s,s.beats[s.i]);
  advanceRoute(f,a,text,false);
 }
@@ -13129,7 +13243,7 @@ function advanceRoute(f,a,text,real){
  const p=project(),mark=()=>{if(real)p.logs.at(-1).simulated=false;};
  if(f.step+1<f.route.length){const next=f.route[f.step+1];recordHandoff(a.id,next,f,real?text:`${text}\n\nContexto anterior: ${f.context.slice(0,1000)}`);if(real)p.handoffs.at(-1).simulated=false;mark();f.step++;f.currentAgentId=next;log(`${f.key}: etapa ${f.step+1}/${f.route.length} iniciada${real?'':' na demonstracao'}.`,'agent',next);mark();
   roomTyping(null);roomPush({kind:'baton',from:a.id,to:next,featureKey:f.key,text,simulated:!real});roomStepStart(f,a.id);save();render();refreshFeatureModal();scheduleStep(simulationStep);}
- else{f.status='review';f.currentAgentId=null;runner.featureId=null;log(`${f.key} enviada para revisão humana. Nenhuma entrega foi aprovada automaticamente.`,'review',a.id);mark();notify('review',{p,f,title:`${f.key} ${f.title}: pronta para revisão`,text:`${a.name} fechou a rota${real?'':' na simulação'}. Aprove a entrega ou peça ajustes.`,key:`review|${f.id}|${f.outputs.length}`});const single=runner.single,kind=runner.kind;
+ else{f.status='review';reviewArrive(f);f.currentAgentId=null;runner.featureId=null;log(`${f.key} enviada para revisão humana. Nenhuma entrega foi aprovada automaticamente.`,'review',a.id);mark();notify('review',{p,f,title:`${f.key} ${f.title}: pronta para revisão`,text:`${a.name} fechou a rota${real?'':' na simulação'}. Aprove a entrega ou peça ajustes.`,key:`review|${f.id}|${f.outputs.length}`});const single=runner.single,kind=runner.kind;
   roomTyping(null);roomPush({kind:'baton',from:a.id,to:null,featureKey:f.key,text,simulated:!real,spawn:kind==='spawn'});if(kind!=='spawn')roomPush({kind:'say',agentId:p.commanderId,featureKey:f.key,text:`${f.key} fechou a rota. A entrega está com você para revisão; aprovar libera quem depende dela.`});roomPush({kind:'review',featureId:f.id,featureKey:f.key});
   save();render();refreshFeatureModal();if(single){runner=null;save();render();toast(kind==='feature'?`${f.key} ${real?'concluída':'concluída na simulação'}. Revise a entrega.`:real?'Spawn concluído. Revise a entrega na tela de Features.':'Spawn simulado concluído. Revise a entrega na tela de Features.');}else scheduleStep(launchNext);}
 }
@@ -13145,10 +13259,10 @@ async function liveStep(f,a){
   roomTyping(null);roomPush({kind:'say',agentId:a.id,featureKey:f.key,text:`Não consegui concluir a ${f.key}: ${message.slice(0,600)}`,error:true});roomPush({kind:'system',text:`${f.key} voltou para Prontas e a execução parou.`,tone:'error'});
   save();render();refreshFeatureModal();refreshConsole();toast(`${a.name} falhou: ${message.slice(0,160)}`,'error');return;
  }
- const text=exit.result||'(o agente não retornou texto)';
+ const sr=stepReport(exit.result||'(o agente não retornou texto)'),text=sr.text;
  // The final report goes in the baton card: drop the bubble that only repeats it.
  const last=exit.room?.lastMain;if(last?.raw&&text.trim().startsWith(last.raw.slice(0,300)))roomRemove(last);
- f.outputs.push({agentId:a.id,at:nowISO(),text,simulated:false,error:false,costUsd:exit.costUsd??null,durationMs:exit.durationMs??null,sessionId:exit.sessionId??null});if(f.outputs.length>300)f.outputs.shift();
+ f.outputs.push({agentId:a.id,at:nowISO(),text,simulated:false,error:false,costUsd:exit.costUsd??null,durationMs:exit.durationMs??null,sessionId:exit.sessionId??null,...(sr.report?{report:sr.report}:{})});if(f.outputs.length>300)f.outputs.shift();
  log(`${a.name} concluiu a etapa de ${f.key}${exit.costUsd!=null?` / US$ ${exit.costUsd.toFixed(4)}`:''}.`,'agent',a.id,p);p.logs.at(-1).simulated=false;
  advanceRoute(f,a,text,true);
 }
@@ -13169,19 +13283,190 @@ function openSpawn(agentId){
  showModal('SPAWN <span class="word-tag">INDIVIDUAL</span>',(live?'CLAUDE CODE / claude -p / ':'SESSÃO SIMULADA / ')+a.name,`<form id="spawnForm"><div class="field"><label for="spawnFeature">FEATURE PARA ${E(a.name)}</label><select id="spawnFeature" name="featureId">${candidates.map(f=>`<option value="${E(f.id)}">${E(f.key)} / ${E(f.title)}</option>`).join('')}</select></div><div class="notice warning">${icon('info')}A rota desta feature será substituida por uma sessão individual de ${E(a.name)}. Depois, a entrega vai para revisão humana. ${live?`O Claude Code roda na pasta da operação, ${E(projectDirLabel())}, com permissão ${E(runtime().permissionMode)} e modelo ${E(runOptionsFor(a).model||'padrão')}.`:'Não há execução real de IA.'}</div><input type="hidden" name="agentId" value="${E(a.id)}"></form>`,cancelButton+'<button class="btn primary" type="submit" form="spawnForm">'+icon('play')+(live?'Spawn / claude -p':'Iniciar spawn / demo')+'</button>','narrow','spawn');
 }
 function spawnAgent(form){if(!guardMutation()||!runGate())return;const d=new FormData(form),f=featureById(d.get('featureId')),a=agentById(d.get('agentId'));if(!f||!a||!project().agentIds.includes(a.id)||!depsReady(f)||['done','review'].includes(f.status))return toast('Feature ou agente indisponível.','error');f.route=[a.id];f.briefs=[];f.status='ready';runner={featureId:null,paused:false,single:true,phase:'running',kind:'spawn',label:f.key,sprintId:'',roomSeq:roomOf().seq};closeModal();log(`Spawn individual de ${a.name} solicitado para ${f.key}.`,'agent',a.id);roomPush({kind:'system',text:`Spawn individual de ${a.name} para ${f.key}. Sem comandante: a sessão é só dele.`});openOpsChat();launchNext(f.id);}
-function openReview(featureId){if(featureById(featureId))openOpsFeature(featureId);}
+function openReview(featureId){if(featureById(featureId))openReviewEditor(featureId);}
+function openFeature(featureId){const f=featureById(featureId);if(!f)return;if(['done','review','running'].includes(f.status))openReviewEditor(featureId);else openFeatureEditor(featureId);}
+/* Delivery review: the feature editor in review mode (openReviewEditor, modal kind 'feature', chat kind 'review'). Every step ends its
+   Markdown report with a ```json {"report":{…}} block (reportContract in buildStepPrompt); stepReport splits it, so o.text keeps the
+   Markdown and o.report the normalized data (normalizeReport). The person's part is f.review {criteria[{n,comment}], tasks[{n,done}]
+   (corrections of the agents' marks only), note}; the effective task marks are written into f.tasks as - [x] / - [ ]. Solicitar ajustes
+   moves the comments to f.rework, which every step of the next run gets as "## Ajustes pedidos na revisão humana"; Aprovar clears it. */
+function reportStatus(v){v=String(v||'').trim().toLowerCase();return v==='ok'||v==='done'||v==='pass'||v.startsWith('atend')?'ok':v==='partial'||v.startsWith('parc')?'partial':v==='no'||v==='fail'||v.startsWith('não')||v.startsWith('nao')?'no':'';}
+function reportList(v,max=40,n=600){return(Array.isArray(v)?v:typeof v==='string'&&v.trim()?[v]:[]).map(x=>typeof x==='string'?x:x&&typeof x==='object'?String(x.item??x.text??x.title??''):String(x??'')).map(x=>x.trim().slice(0,n)).filter(Boolean).slice(0,max);}
+function normalizeReport(r){
+ if(!r||typeof r!=='object'||Array.isArray(r))return null;const num=v=>{const n=parseInt(v,10);return n>=1&&n<=200?n:0;},s=(v,n)=>String(v??'').trim().slice(0,n);
+ const out={done:reportList(r.done),notDone:(Array.isArray(r.notDone)?r.notDone:[]).slice(0,40).map(x=>typeof x==='string'?{item:s(x,600),reason:''}:x&&typeof x==='object'?{item:s(x.item??x.text,600),reason:s(x.reason,600)}:null).filter(x=>x?.item),pending:reportList(r.pending),decisions:reportList(r.decisions),next:reportList(r.next),files:reportList(r.files,80,300),checks:reportList(r.checks),scenarios:reportList(r.scenarios,30,1200),
+  tasks:(Array.isArray(r.tasks)?r.tasks:[]).slice(0,120).map(x=>x&&typeof x==='object'&&num(x.n)?{n:num(x.n),done:x.done===true||x.done==='true',note:s(x.note,600)}:null).filter(Boolean),
+  criteria:(Array.isArray(r.criteria)?r.criteria:[]).slice(0,120).map(x=>x&&typeof x==='object'&&num(x.n)?{n:num(x.n),status:reportStatus(x.status),evidence:s(x.evidence,1200)}:null).filter(x=>x&&(x.status||x.evidence))};
+ return Object.values(out).some(v=>v.length)?out:null;
+}
+// f.review (texts=false) and f.rework (texts=true: the criterion and task texts travel with the request).
+function featureNotes(v,texts){
+ if(!v||typeof v!=='object')return null;const num=x=>{const n=parseInt(x,10);return n>=1&&n<=200?n:0;},t=x=>texts?{text:String(x.text??'').trim().slice(0,1200)}:{};
+ const criteria=(Array.isArray(v.criteria)?v.criteria:[]).slice(0,120).map(x=>x&&num(x.n)?{n:num(x.n),...t(x),comment:String(x.comment??'').trim().slice(0,2000)}:null).filter(x=>x?.comment);
+ const tasks=(Array.isArray(v.tasks)?v.tasks:[]).slice(0,120).map(x=>x&&num(x.n)?{n:num(x.n),...t(x),done:x.done===true}:null).filter(Boolean),note=String(v.note??'').trim().slice(0,4000);
+ return criteria.length||tasks.length||note?{criteria,tasks,note,at:Number.isFinite(Date.parse(v.at))?new Date(v.at).toISOString():new Date().toISOString()}:null;
+}
+// Numbered items of a criteria or tasks text: its list items (any depth), or every non-empty line when it has no list.
+function featureItems(text){
+ const lines=String(text||'').replace(/\r/g,'').split('\n'),items=[];let fence=false;
+ for(const [i,l] of lines.entries()){if(/^\s*```/.test(l)){fence=!fence;continue;}if(fence||!l.trim()||/^\s*(#{1,6}\s|>|\|)/.test(l))continue;const m=l.match(/^(\s*)(?:[-*+]|\d+[.)])\s+(?:\[( |x|X)\]\s+)?(.*)$/);items.push({line:i,text:(m?m[3]:l).trim(),done:!!m?.[2]?.trim(),list:!!m,indent:m?m[1]:''});}
+ const list=items.filter(x=>x.list);return(list.length?list:items).filter(x=>x.text).map((x,k)=>({...x,n:k+1}));
+}
+function featureTasksMarked(text,marks){const lines=String(text||'').replace(/\r/g,'').split('\n');for(const it of featureItems(text))if(marks.has(it.n))lines[it.line]=`${it.indent}- [${marks.get(it.n)?'x':' '}] ${it.text}`;return lines.join('\n');}
+function featureNumbered(text,checks){return featureItems(text).map(x=>`${x.n}. ${checks?`[${x.done?'x':' '}] `:''}${x.text}`).join('\n');}
+function stepReport(text){const raw=String(text||''),{reply,data}=parseCoWrite(raw),r=data&&typeof data==='object'?normalizeReport(data.report&&typeof data.report==='object'?data.report:data):null;return r?{text:reply||raw.trim(),report:r}:{text:raw,report:null};}
+function deliveryOutputs(f){return f.outputs.filter(o=>!f.runAt||o.at>=f.runAt);}
+// The delivery in one place: lists in route order with who wrote each item, the latest mark per task and per criterion.
+function deliveryReport(f){
+ const outs=deliveryOutputs(f).filter(o=>!o.error),agg={done:[],notDone:[],pending:[],decisions:[],next:[],files:[],checks:[],scenarios:[],tasks:new Map(),criteria:new Map(),any:false,scenarioMd:null};
+ for(const o of outs){const r=o.report,who=o.agentId;if(!r)continue;agg.any=true;
+  for(const k of ['done','pending','decisions','next','checks','scenarios'])for(const x of r[k])agg[k].push({text:x,agentId:who});
+  for(const x of r.notDone)agg.notDone.push({...x,agentId:who});for(const x of r.files)if(!agg.files.some(y=>y.text===x))agg.files.push({text:x,agentId:who});
+  for(const t of r.tasks)agg.tasks.set(t.n,{...t,agentId:who});for(const c of r.criteria)agg.criteria.set(c.n,{...c,agentId:who});}
+ // Without scenarios in the JSON, the last report's "Cenários de teste humano" section still shows.
+ if(!agg.scenarios.length){const last=outs.at(-1),m=last&&String(last.text).match(/^#{1,4}\s*Cen[áa]rios de teste humano[^\n]*\n([\s\S]*?)(?=\n#{1,4}\s|(?![\s\S]))/im);if(m?.[1].trim())agg.scenarioMd={text:m[1].trim(),agentId:last.agentId};}
+ return agg;
+}
+// Task state on screen: the person's correction (f.review.tasks) > the agents' latest mark > the mark already in f.tasks.
+function reviewTaskState(f,agg=deliveryReport(f)){const fix=new Map((f.review?.tasks||[]).map(t=>[t.n,t.done]));return featureItems(f.tasks).map(it=>{const r=agg.tasks.get(it.n)||null;return{...it,textDone:it.done,agent:r,fixed:fix.has(it.n),done:fix.has(it.n)?fix.get(it.n):r?r.done:it.done};});}
+function reviewArrive(f){const agg=deliveryReport(f);if(agg.tasks.size)f.tasks=featureTasksMarked(f.tasks,new Map([...agg.tasks].map(([n,t])=>[n,t.done])));f.review=null;}
+function reportContract(last){
+ const json='{"report":{"done":["o que você fez"],"notDone":[{"item":"o que ficou sem fazer","reason":"por quê"}],"pending":["o que fica pendente e para quem"],"decisions":["decisão tomada e o motivo"],"next":["próximo passo"],"files":["caminho/do/arquivo"],"checks":["verificação executada e o resultado"],"tasks":[{"n":1,"done":true,"note":"o que foi feito nesta tarefa"}]'+(last?',"criteria":[{"n":1,"status":"ok","evidence":"como foi verificado"}],"scenarios":["onde abrir, o que fazer, o resultado esperado"]':'')+'}}';
+ return['## Relatório estruturado (obrigatório)','Depois do relatório em Markdown, termine a resposta com um bloco ```json, o último da mensagem, neste formato:','```json',json,'```',
+  '- "tasks" e "criteria" usam os números das listas de tarefas e de critérios acima. Em "tasks", inclua as tarefas em que você trabalhou: done true só para o que fez de fato, com uma nota curta.',
+  last?'- Você é a última etapa: avalie TODOS os critérios de aceitação em "criteria", com "status" "ok" (atendido), "partial" (parcial) ou "no" (não atendido) e a evidência (arquivo, teste, comando ou comportamento observado). Em "scenarios", um cenário de teste humano por critério e ao menos um de erro ou borda.':'- Não avalie os critérios de aceitação nem escreva cenários: isso fica com a última etapa da rota.',
+  '- Listas sem conteúdo ficam []. "checks" só com o que você executou de verdade. Não invente arquivos, testes ou resultados.'].join('\n');
+}
+function reworkBlock(r){
+ if(!r)return'';const when=new Date(r.at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+ return['## Ajustes pedidos na revisão humana',`A entrega anterior desta feature voltou da revisão humana (${when}). Trate cada ponto abaixo antes de qualquer outra coisa e diga no relatório como resolveu cada um.`,
+  r.criteria.length?'Comentários por critério de aceitação:\n'+r.criteria.map(c=>`- Critério ${c.n}${c.text?` (${c.text})`:''}: ${c.comment}`).join('\n'):'',
+  r.tasks.length?'Tarefas que ainda não estão feitas:\n'+r.tasks.map(t=>`- Tarefa ${t.n}${t.text?`: ${t.text}`:''}`).join('\n'):'',r.note?`Observação geral da pessoa:\n${r.note}`:''].filter(Boolean).join('\n\n');
+}
+// Demo: the simulated step reports like a live one (tasks spread over the route, the last step evaluates the criteria).
+function simReport(f,a,last){
+ const tasks=featureItems(f.tasks),crit=featureItems(f.criteria),len=Math.max(1,f.route.length),hold=tasks.length>=3?tasks.at(-1):null,mine=tasks.filter((t,i)=>t===hold?last:i%len===f.step),held=last?hold:null,next=agentById(f.route[f.step+1]);
+ const did=mine.filter(t=>t!==held);
+ return normalizeReport({done:did.length?did.map(t=>`${t.text} (simulado)`):[`Parte de ${roleLabel(a).toLowerCase()} organizada para a feature (simulado).`],
+  notDone:held?[{item:held.text,reason:'Na simulação esta tarefa fica para a próxima rodada, para mostrar como uma pendência aparece na revisão.'}]:[],
+  pending:last?['Validar a entrega com código real: este registro é simulado.']:[],decisions:[`${a.name} seguiu as diretrizes da squad para ${roleLabel(a).toLowerCase()} (simulado).`],
+  next:last?['Revisar os critérios e aprovar ou pedir ajustes.']:[`Passar para ${next?.name||'a próxima etapa'}.`],files:[],checks:last?['Nenhuma verificação executada: registro simulado.']:[],
+  tasks:mine.map(t=>({n:t.n,done:t!==held,note:t===held?'Não concluída na simulação.':`Simulado por ${a.name}.`})),
+  criteria:last?crit.map((c,i)=>({n:c.n,status:crit.length>1&&i===crit.length-1?'partial':'ok',evidence:crit.length>1&&i===crit.length-1?'Simulação: falta a evidência deste critério, nenhum teste foi executado.':'Simulação: critério coberto pelo plano das etapas, sem execução real.'})):[],
+  scenarios:last?crit.map(c=>`Abrir a funcionalidade e confirmar: ${c.text}`):[]});
+}
+const RV_LABEL={ok:'ATENDIDO',partial:'PARCIAL',no:'NÃO ATENDIDO',none:'SEM AVALIAÇÃO'};
+const RV_QUICK=[['Resumir a entrega','Resuma a entrega critério por critério: o que está atendido, o que está parcial e o que ficou sem evidência.'],['Escrever comentários','Escreva comentários objetivos nos critérios parciais, não atendidos ou sem evidência, dizendo ao squad o que corrigir.'],['O que testar à mão','Quais cenários eu devo testar à mão antes de aprovar esta entrega?']];
+const REVIEW_CHAT_SYSTEM=['# Modo revisão de entrega (SQUAD/CODE)','Você ajuda a pessoa a revisar a entrega de UMA feature que o squad executou. Você não tem ferramentas: não abre arquivos, não roda comandos e não vê o código. Trabalha só com os critérios, as tarefas, o relatório consolidado e as entregas que vêm na mensagem. Quando algo depende de olhar o código ou rodar o sistema, diga isso e sugira o que a pessoa deve conferir.','Seja direto e honesto: aponte critério sem evidência, verificação que não foi executada, pendência esquecida e risco. A decisão de aprovar ou pedir ajustes é da pessoa.','## Comentários na tela de revisão','Quando a pessoa pedir, ou concordar, que você escreva comentários, termine a resposta com um bloco ```json só com o que muda: {"comments":[{"n":2,"comment":"texto"}],"note":"observação geral"}. "n" é o número do critério. Cada comentário diz ao squad o que corrigir ou validar, em uma ou duas frases. Um comentário substitui o que está escrito naquele critério. Sem mudanças, não mande o bloco.','Para perguntar algo com opções, use "ask" no mesmo bloco: {"ask":{"question":"…","options":["…","…"]}}.','A resposta em si é texto corrido de chat, curto, sem títulos.'].join('\n');
+function mdInline(t){const h=renderMarkdown(t);return/^<p>[\s\S]*<\/p>$/.test(h)&&h.indexOf('<p>',1)<0?h.slice(3,-4):h;}
+function rvWho(id){const a=agentById(id);return a?`<span class="rv-who" title="${E(roleLabel(a))}"><img src="${portrait(a)}" alt="">${E(a.name)}</span>`:'';}
+function rvSec(key,label,hint,count,body,closed){return`<section class="fe-md rv-sec${closed?' collapsed':''}" data-rv="${key}"><header class="fe-md-head"><button type="button" class="fe-md-toggle" data-action="fe-collapse" aria-expanded="${!closed}"><span class="fe-chev"></span>${label}<small>${hint}</small></button><em class="fe-md-count">${count}</em></header><div class="fe-md-body rv-body">${body}</div></section>`;}
+function rvList(items,empty,fmt=x=>mdInline(x.text)){return items.length?`<ul class="rv-list">${items.map(x=>`<li><div class="rv-li">${fmt(x)}</div>${rvWho(x.agentId)}</li>`).join('')}</ul>`:`<p class="rv-empty">${empty}</p>`;}
+function rvGroup(title,html,tone=''){return`<div class="rv-group${tone?' '+tone:''}"><div class="rv-group-title">${title}</div>${html}</div>`;}
+function reworkHTML(r){return`<div class="rv-rework">${r.criteria.map(c=>`<p><b>Critério ${c.n}</b>${c.text?` <span class="muted">${E(c.text)}</span>`:''}<br>${E(c.comment)}</p>`).join('')}${r.tasks.length?`<p><b>Tarefas não feitas</b><br>${r.tasks.map(t=>E(`${t.n}. ${t.text}`)).join('<br>')}</p>`:''}${r.note?`<p><b>Observação geral</b><br>${E(r.note)}</p>`:''}</div>`;}
+function rvOutputHTML(o,open){const a=agentById(o.agentId),r=o.report,tag=o.simulated?'SIMULADO':o.error?'FALHA':'CLAUDE CODE',meta=[clock(o.at),o.costUsd!=null?`US$ ${Number(o.costUsd).toFixed(4)}`:'',o.durationMs?`${Math.round(o.durationMs/1000)} s`:'',o.sessionId?`sessão ${o.sessionId.slice(0,8)}`:''].filter(Boolean).join(' · '),sum=r?[r.done.length&&`${r.done.length} feito${r.done.length>1?'s':''}`,r.notDone.length&&`${r.notDone.length} não feito${r.notDone.length>1?'s':''}`,r.pending.length&&`${r.pending.length} pendência${r.pending.length>1?'s':''}`,r.criteria.length&&`${r.criteria.length} critério${r.criteria.length>1?'s':''}`].filter(Boolean).join(' · '):'';
+ return`<details class="rv-out${o.error?' error':''}" data-at="${E(o.at)}"${open?' open':''}><summary>${a?`<img src="${portrait(a)}" alt="">`:''}<span class="rv-out-id"><b>${E(a?.name||'AGENTE REMOVIDO')}</b><small>${E(a?roleLabel(a):'')} · ${E(meta)}</small></span>${sum?`<span class="rv-out-sum">${E(sum)}</span>`:''}<span class="tag${o.simulated?'':' accent'}">${tag}</span></summary><div class="conv-md rv-md">${renderMarkdown(o.text)}</div></details>`;}
+function reviewSig(f){return JSON.stringify([f.status,f.outputs.length,f.outputs.at(-1)?.at||'',f.runAt||'',f.review?.at||'',f.tasks]);}
+function reviewFormHTML(f,draft=null){
+ const p=project(),agg=deliveryReport(f),crit=featureItems(f.criteria),edit=['review','done'].includes(f.status),ro=edit?'':' readonly',outs=deliveryOutputs(f),older=f.outputs.filter(o=>!outs.includes(o)),sp=sprintOf(f,p);
+ const closed=(k,def)=>draft?.closed?draft.closed.has(k)?true:draft.open.has(k)?false:def:def,cm=new Map((draft?draft.criteria:f.review?.criteria||[]).map(c=>[c.n,c.comment])),note=draft?draft.note??'':f.review?.note||'';
+ const tasks=reviewTaskState(f,agg).map(t=>draft?.tasks&&draft.status===f.status&&draft.tasks.has(t.n)?{...t,done:draft.tasks.get(t.n)}:t);
+ const st=n=>agg.criteria.get(n)?.status||'none',count=s=>crit.filter(c=>st(c.n)===s).length,cost=outs.reduce((s,o)=>s+(Number(o.costUsd)||0),0),real=outs.some(o=>!o.simulated);
+ const head=`<div class="rv-head"><h3 class="rv-title">${E(f.title)}</h3><div class="rv-tags"><span class="tag">${E(f.key)}</span><span class="tag">${E(SCOPES[f.scope]||f.scope)}</span><span class="tag">${E(f.priority)}</span>${sp?`<span class="tag">${E(sprintCode(sp,p))} / ${E(sp.name)}</span>`:''}<span class="status-label ${f.status}">${E(STATUS[f.status].toUpperCase())}</span><span class="tag${real?' accent':''}">${real?'CLAUDE CODE':'SIMULADO'}</span>${cost?`<span class="tag">US$ ${cost.toFixed(4)}</span>`:''}</div>${f.route.length?`<div class="rv-route">${f.route.map(agentById).filter(Boolean).map(a=>rvWho(a.id)).join('<span class="rv-arrow">›</span>')}</div>`:''}
+<div class="rv-stats">${['ok','partial','no','none'].map(s=>`<span class="rv-stat ${s}"><b>${count(s)}</b>${RV_LABEL[s].toLowerCase()}</span>`).join('')}<span class="rv-stat"><b>${tasks.filter(t=>t.done).length}/${tasks.length}</b>tarefas feitas</span><span class="rv-stat"><b>${agg.pending.length}</b>pendências</span></div>
+${f.status==='running'?`<div class="notice">${icon('info')}A feature ainda está em execução: os registros aparecem aqui conforme as etapas terminam.</div>`:''}${!agg.any&&outs.length?`<div class="notice warning">${icon('info')}Os agentes não mandaram relatório estruturado nesta entrega. Leia as entregas dos especialistas abaixo.</div>`:''}</div>`;
+ const critHTML=crit.length?crit.map(c=>{const r=agg.criteria.get(c.n),s=st(c.n);return`<article class="rv-crit" data-st="${s}"><header><b class="rv-n">${c.n}</b><div class="rv-crit-text">${mdInline(c.text)}</div><span class="rv-badge ${s}">${RV_LABEL[s]}</span></header>${r?.evidence?`<div class="rv-evidence">${rvWho(r.agentId)}<div class="rv-li">${mdInline(r.evidence)}</div></div>`:`<p class="rv-empty">${agg.any?'O agente não deixou evidência para este critério.':'Sem avaliação estruturada do agente.'}</p>`}<label class="rv-comment"><span>SEU COMENTÁRIO</span><textarea class="rv-input" id="rvC${c.n}" name="rc${c.n}" rows="1" maxlength="2000" placeholder="${edit?'O que falta, o que mudar ou o que você validou':'Disponível quando a entrega chegar à revisão'}"${ro}>${E(cm.get(c.n)||'')}</textarea></label></article>`;}).join(''):`<div class="conv-md rv-md">${f.criteria?renderMarkdown(f.criteria):'<p class="rv-empty">Sem critérios de aceitação.</p>'}</div>`;
+ const taskHTML=tasks.length?`<ul class="rv-tasks">${tasks.map(t=>`<li class="rv-task${t.done?' done':''}"><label><input type="checkbox" name="rt${t.n}" data-base="${(t.agent?t.agent.done:t.textDone)?1:0}"${t.done?' checked':''}${edit?'':' disabled'}><span class="rv-n">${t.n}</span><span class="rv-li">${mdInline(t.text)}</span></label><div class="rv-task-meta">${t.agent?`${rvWho(t.agent.agentId)}<span>${t.agent.done?'marcou como feita':'marcou como não feita'}${t.agent.note?`: ${E(t.agent.note)}`:''}</span>`:'<em>sem marcação dos agentes</em>'}${t.fixed?'<span class="rv-fixed">corrigida por você</span>':''}</div></li>`).join('')}</ul>`:`<p class="rv-empty">A feature não tem tarefas. Elas são escritas no editor da feature, antes da execução.</p>`;
+ const notDone=rvList(agg.notDone,'Nada registrado como não feito.',x=>`${mdInline(x.item)}${x.reason?`<small class="rv-reason">Motivo: ${E(x.reason)}</small>`:''}`);
+ const files=agg.files.length?`<ul class="rv-files">${agg.files.map(x=>`<li><code>${E(x.text)}</code>${rvWho(x.agentId)}</li>`).join('')}</ul>`:'<p class="rv-empty">Nenhum arquivo informado.</p>';
+ const scen=agg.scenarios.length?rvList(agg.scenarios,''):agg.scenarioMd?`<div class="conv-md rv-md">${renderMarkdown(agg.scenarioMd.text)}</div>`:'<p class="rv-empty">Nenhum cenário de teste humano informado.</p>';
+ const timeline=outs.length||older.length?`<div class="rv-timeline">${outs.map(o=>rvOutputHTML(o,draft?.outs?.has(o.at))).join('')||'<p class="rv-empty">Nenhuma entrega nesta rodada ainda.</p>'}${older.length?`<details class="rv-older"><summary>Rodadas anteriores (${older.length})</summary>${older.map(o=>rvOutputHTML(o,false)).join('')}</details>`:''}</div>`:'<p class="rv-empty">Nenhum registro de entrega disponível ainda.</p>';
+ return head+(f.rework?rvSec('rework','AJUSTES PEDIDOS','na revisão anterior',feClock(f.rework.at),reworkHTML(f.rework),closed('rework',false)):'')
+  +rvSec('scope','ESCOPO','o que devia ser entregue',feCount('description',f.description),`<div class="conv-md rv-md">${f.description?renderMarkdown(f.description):'<p class="rv-empty">Sem escopo escrito.</p>'}</div>`,closed('scope',true))
+  +rvSec('criteria','CRITÉRIOS DE ACEITAÇÃO','avaliação do agente e o seu comentário',`${count('ok')}/${crit.length} atendidos`,`<div class="rv-crits">${critHTML}</div>`,closed('criteria',false))
+  +rvSec('tasks','TAREFAS','marcadas pelos agentes, corrija se precisar',`${tasks.filter(t=>t.done).length}/${tasks.length} feitas`,taskHTML,closed('tasks',false))
+  +rvSec('done','O QUE FOI FEITO / NÃO FEITO','',`${agg.done.length} · ${agg.notDone.length}`,`<div class="rv-groups">${rvGroup('FEITO',rvList(agg.done,'Nada registrado como feito.'),'ok')}${rvGroup('NÃO FEITO',notDone,'no')}</div>`,closed('done',false))
+  +rvSec('notes','PENDÊNCIAS / DECISÕES / PRÓXIMOS PASSOS','com o agente que registrou',`${agg.pending.length} · ${agg.decisions.length} · ${agg.next.length}`,`<div class="rv-groups three">${rvGroup('PENDÊNCIAS',rvList(agg.pending,'Nenhuma pendência.'),'partial')}${rvGroup('DECISÕES',rvList(agg.decisions,'Nenhuma decisão registrada.'))}${rvGroup('PRÓXIMOS PASSOS',rvList(agg.next,'Nenhum próximo passo.'))}</div>`,closed('notes',false))
+  +rvSec('checks','ARQUIVOS E VERIFICAÇÕES / CENÁRIOS DE TESTE HUMANO','',`${agg.files.length} arquivo${agg.files.length===1?'':'s'}`,`<div class="rv-groups">${rvGroup('ARQUIVOS',files)}${rvGroup('VERIFICAÇÕES EXECUTADAS',rvList(agg.checks,'Nenhuma verificação informada.'))}</div>${rvGroup('CENÁRIOS DE TESTE HUMANO',scen)}`,closed('checks',false))
+  +rvSec('note','OBSERVAÇÃO GERAL','para o squad',note.trim()?'escrita':'vazia',`<textarea class="rv-input rv-note" id="rvNote" name="note" rows="2" maxlength="4000" placeholder="${edit?'Algo que vale para a entrega toda: contexto, prioridade dos ajustes, o que você testou.':'Disponível quando a entrega chegar à revisão'}"${ro}>${E(note)}</textarea>`,closed('note',false))
+  +rvSec('outputs','ENTREGAS DOS ESPECIALISTAS','relatório de cada etapa',`${outs.length} etapa${outs.length===1?'':'s'}`,timeline,closed('outputs',true))
+  +`<div class="notice${real?'':' warning'} rv-foot-note">${icon('info')}${real?'Registros do Claude Code: confira os arquivos alterados na pasta da operação antes de aprovar. Aprovar libera as features dependentes.':'Estes registros são simulados. Aprovar altera apenas o estado demonstrativo da feature; não valida código real.'}</div>`;
+}
+function reviewFooterHTML(f){
+ const real=f.outputs.some(o=>!o.simulated),saved=`<span class="rv-saved" id="rvSaved">${f.review?.at?`Comentários salvos ${E(feClock(f.review.at))}`:''}</span>`,save=`<button class="btn ghost" type="submit" form="reviewForm">${icon('check')}Salvar comentários</button>`;
+ if(f.status==='review')return`${saved}<span class="grow"></span>${save}<button class="btn ghost" data-action="feature-rework" data-id="${E(f.id)}">${icon('edit')}Solicitar ajustes</button><button class="btn primary" data-action="feature-approve" data-id="${E(f.id)}">${icon('check')}${real?'Aprovar entrega':'Aprovar entrega / demo'}</button>`;
+ return`${saved}<span class="grow"></span>${f.status==='done'?save:''}<button class="btn ghost" data-action="modal-close">Fechar</button>`;
+}
+function newReviewChat(f){const saved=ui.reviewChats?.[f.id];return{kind:'review',featureId:f.id,greeting:saved?.greeting||'Oi! Li o relatório da entrega. Posso resumir critério por critério, apontar o que ficou sem evidência e escrever os comentários com você.',messages:saved?saved.messages.map(m=>({...m})):[],seq:saved?.seq||0,queue:[],busy:false,runId:null,started:0,token:null,read:false,opened:Date.now()};}
+function openReviewEditor(featureId){
+ const f=featureById(featureId);if(!f)return;if(ui.modal==='feature'&&ui.featureChat?.kind==='review'&&ui.featureChat.featureId===f.id)return refreshReviewEditor(true);
+ if(ui.modal==='feature')featureChatStop(true);if(ui.view==='projects'){ui.opsFeature=f.id;ui.opsFeatureDraft=null;render();}
+ ui.featureChat=newReviewChat(f);const p=project(),a=coWriterAgent();
+ showModal('REVISÃO DE <span class="word-tag">ENTREGA</span>',`${p.code} / ${f.key} / ${STATUS[f.status]||''}`,`<div class="fe-layout"><form id="reviewForm" class="fe-form rv-form" data-sig="${E(reviewSig(f))}" data-status="${f.status}" novalidate>${reviewFormHTML(f)}</form>${feChatHTML(a,coWriterModel(a),liveMode(),{quick:RV_QUICK,tag:'REVISÃO'})}</div>`,reviewFooterHTML(f),'wide feature-editor review-editor','feature');
+ renderFeatureChat();requestAnimationFrame(()=>$$('#reviewForm .rv-input').forEach(autoGrow));
+}
+function reviewDraft(form){
+ const d=new FormData(form),out={criteria:[],tasks:new Map(),note:d.get('note'),status:form.dataset.status,closed:new Set($$('.rv-sec.collapsed',form).map(s=>s.dataset.rv)),open:new Set($$('.rv-sec:not(.collapsed)',form).map(s=>s.dataset.rv)),outs:new Set($$('details.rv-out[open]',form).map(x=>x.dataset.at))};
+ for(const [k,v] of d)if(/^rc\d+$/.test(k))out.criteria.push({n:+k.slice(2),comment:String(v)});$$('input[name^="rt"]',form).forEach(el=>out.tasks.set(+el.name.slice(2),el.checked));return out;
+}
+// Background renders (a step finished, the run moved on) rebuild the form only when the delivery changed, keeping what is typed.
+function refreshReviewEditor(force){
+ const c=ui.featureChat,f=ui.modal==='feature'&&c?.kind==='review'?featureById(c.featureId):null,form=$('#reviewForm');if(!f||!form)return;const sig=reviewSig(f);if(!force&&form.dataset.sig===sig)return;
+ const draft=reviewDraft(form),scroll=form.scrollTop;form.innerHTML=reviewFormHTML(f,draft);form.dataset.sig=sig;form.dataset.status=f.status;form.scrollTop=scroll;$$('#reviewForm .rv-input').forEach(autoGrow);
+ const foot=$('#modalRoot .modal-footer');if(foot)foot.innerHTML=reviewFooterHTML(f);const sub=$('#modalRoot .modal-header .eyebrow');if(sub)sub.textContent=`${project().code} / ${f.key} / ${STATUS[f.status]||''}`;
+}
+// The person's part from the open form: comments per criterion, the note and the task corrections (a box that differs from the agents' mark).
+function reviewCollect(f){
+ const form=$('#reviewForm');if(!form||ui.featureChat?.featureId!==f.id)return f.review;const d=new FormData(form);
+ const tasks=$$('input[name^="rt"]',form).filter(el=>el.checked!==(el.dataset.base==='1')).map(el=>({n:+el.name.slice(2),done:el.checked}));
+ return featureNotes({criteria:featureItems(f.criteria).map(c=>({n:c.n,comment:d.get('rc'+c.n)})),tasks,note:d.get('note'),at:nowISO()},false);
+}
+function reviewApplyTasks(f){const ts=reviewTaskState(f);if(ts.length)f.tasks=featureTasksMarked(f.tasks,new Map(ts.map(t=>[t.n,t.done])));}
+function saveReview(){
+ const f=featureById(ui.featureChat?.featureId);if(!f||!['review','done'].includes(f.status))return;f.review=reviewCollect(f);reviewApplyTasks(f);
+ log(`${f.key}: comentários da revisão salvos.`,'review');save();render();refreshReviewEditor(true);toast('Comentários da revisão salvos.');
+}
 function reviewHTML(f){
- const outputs=f.outputs.map(o=>`<article class="review-output"><h3>${E(agentById(o.agentId)?.name||'AGENTE REMOVIDO')} / ${o.simulated?'REGISTRO SIMULADO':o.error?'FALHA NA EXECUÇÃO':'CLAUDE CODE'}</h3><time>${clock(o.at)}${o.costUsd!=null?` / US$ ${Number(o.costUsd).toFixed(4)}`:''}${o.durationMs?` / ${Math.round(o.durationMs/1000)}s`:''}${o.sessionId?` / sessão ${E(o.sessionId.slice(0,8))}`:''}</time><p>${E(o.text)}</p></article>`).join('');
- const body=`<div class="between" style="margin-bottom:20px"><span class="tag">${E(f.key)} / ${E(SCOPES[f.scope])}</span><span class="status-label ${f.status}">${E(STATUS[f.status].toUpperCase())}</span></div><h3 style="font-size:20px;font-weight:450;margin-bottom:18px">${E(f.title)}</h3><div class="eyebrow" style="margin-bottom:8px">CRITÉRIOS DE ACEITAÇÃO</div><p class="prose" style="margin-bottom:25px">${E(f.criteria)}</p><div class="eyebrow" style="margin-bottom:18px">ENTREGAS DOS ESPECIALISTAS</div>${outputs||'<p class="prose">Nenhum registro de entrega disponível ainda.</p>'}<div class="notice warning">${icon('info')}${f.outputs.some(o=>!o.simulated)?'Registros do Claude Code: revise os arquivos alterados no repositório antes de aprovar. Aprovar libera as features dependentes.':'Estes registros sao simulados. Aprovar altera apenas o estado demonstrativo da feature; não valida código real.'}</div>`;
- const footer=f.status==='review'?`<button class="btn ghost" data-action="feature-rework" data-id="${E(f.id)}">${icon('edit')}Solicitar ajustes</button><button class="btn primary" data-action="feature-approve" data-id="${E(f.id)}">${icon('check')}${f.outputs.some(o=>!o.simulated)?'Aprovar entrega':'Aprovar entrega / demo'}</button>`:'';
- return body+(footer?`<div class="ops-detail-actions">${footer}</div>`:'');
+ const agg=deliveryReport(f),crit=featureItems(f.criteria),ts=reviewTaskState(f,agg),count=s=>crit.filter(c=>(agg.criteria.get(c.n)?.status||'none')===s).length,outs=deliveryOutputs(f);
+ return`<div class="rv-summary"><div class="between"><span class="tag">${E(f.key)} / ${E(SCOPES[f.scope])}</span><span class="status-label ${f.status}">${E(STATUS[f.status].toUpperCase())}</span></div><h3>${E(f.title)}</h3>
+<div class="rv-stats">${['ok','partial','no','none'].map(s=>`<span class="rv-stat ${s}"><b>${count(s)}</b>${RV_LABEL[s].toLowerCase()}</span>`).join('')}</div>
+<p class="rv-summary-line">${ts.filter(t=>t.done).length}/${ts.length} tarefas feitas · ${agg.notDone.length} não feito${agg.notDone.length===1?'':'s'} · ${agg.pending.length} pendência${agg.pending.length===1?'':'s'} · ${outs.length} entrega${outs.length===1?'':'s'}${f.review?' · comentários salvos':''}${f.rework?' · ajustes pedidos antes':''}</p>
+${outs.at(-1)?`<div class="rv-summary-last">${rvWho(outs.at(-1).agentId)}<small>${clock(outs.at(-1).at)}</small></div>`:''}</div>
+<div class="ops-detail-actions"><button class="btn primary" data-action="feature-review" data-id="${E(f.id)}">${icon('eye')}Abrir revisão</button></div>`;
 }
 function approveFeature(featureId,approve){
  const f=featureById(featureId);if(!f||f.status!=='review')return toast('Somente features em revisão podem ser aprovadas.','error');
+ const review=reviewCollect(f);
+ if(!approve){
+  if(!review?.criteria.length&&!review?.note){const el=$('#reviewForm .rv-crit[data-st="no"] .rv-input,#reviewForm .rv-crit[data-st="partial"] .rv-input,#reviewForm .rv-input');if(el){el.closest('.rv-sec')?.classList.remove('collapsed');el.focus();}else openReviewEditor(f.id);return toast('Escreva ao menos um comentário (num critério ou na observação geral) para pedir ajustes.','error');}
+  f.review=review;reviewApplyTasks(f);const items=featureItems(f.criteria);
+  f.rework=featureNotes({criteria:review.criteria.map(c=>({...c,text:items.find(x=>x.n===c.n)?.text||''})),tasks:reviewTaskState(f).filter(t=>!t.done).map(t=>({n:t.n,text:t.text,done:false})),note:review.note,at:nowISO()},true);f.review=null;
+ }else{f.review=review;reviewApplyTasks(f);f.rework=null;}
  f.status=approve?'done':'ready';f.step=0;f.currentAgentId=null;
- log(`${f.key}: ${approve?'entrega aprovada pelo operador':'ajustes solicitados pelo operador'}.`,'review');notifResolve(n=>n.kind==='review'&&n.fid===f.id);const wasBlocked=approve?project().features.filter(x=>x.status==='blocked'):[];refreshBlocked();for(const x of wasBlocked)if(x.status==='ready')notify('unblocked',{f:x,title:`${x.key} ${x.title}: desbloqueada`,text:`A aprovação da ${f.key} liberou esta feature para a próxima execução.`});save();closeModal();render();toast(approve?'Entrega aprovada na demonstracao. Dependências liberadas.':'Feature devolvida para a fila de execução.');
+ log(`${f.key}: ${approve?'entrega aprovada pelo operador':`ajustes solicitados pelo operador (${f.rework.criteria.length} comentário${f.rework.criteria.length===1?'':'s'} por critério${f.rework.note?' e observação geral':''})`}.`,'review');notifResolve(n=>n.kind==='review'&&n.fid===f.id);const wasBlocked=approve?project().features.filter(x=>x.status==='blocked'):[];refreshBlocked();for(const x of wasBlocked)if(x.status==='ready')notify('unblocked',{f:x,title:`${x.key} ${x.title}: desbloqueada`,text:`A aprovação da ${f.key} liberou esta feature para a próxima execução.`});save();closeModal();render();toast(approve?(f.outputs.some(o=>!o.simulated)?'Entrega aprovada. Dependências liberadas.':'Entrega aprovada na demonstração. Dependências liberadas.'):'Ajustes pedidos: a feature voltou para Prontas e a próxima execução recebe os comentários.');
 }
-function openFeature(featureId){const f=featureById(featureId);if(!f)return;if(['done','review','running'].includes(f.status))openOpsFeature(featureId);else openFeatureEditor(featureId);}
+// Review chat (kind 'review', the squad's PRD): no tools, it reads the consolidated report and the form as it is now.
+function reviewChatPrompt(a,msgs){
+ const c=ui.featureChat,f=featureById(c.featureId),p=project(),fresh=new Set(msgs.map(m=>m.id)),clip=(t,n)=>t.length>n?t.slice(0,n)+' […]':t,form=$('#reviewForm'),d=form?new FormData(form):null,agg=deliveryReport(f),who=id=>agentById(id)?.name||'agente';
+ const crit=featureItems(f.criteria).map(x=>{const r=agg.criteria.get(x.n),cm=String(d?.get('rc'+x.n)||'').trim();return`${x.n}. ${x.text}\n   Avaliação do agente: ${r?.status?{ok:'atendido',partial:'parcial',no:'não atendido'}[r.status]:'sem avaliação'}${r?.evidence?`. Evidência: ${r.evidence}`:''}${cm?`\n   Comentário escrito pela pessoa: ${cm}`:''}`;}).join('\n');
+ const tasks=reviewTaskState(f,agg).map(t=>`${t.n}. [${t.done?'x':' '}] ${t.text}${t.agent?` (${who(t.agent.agentId)}${t.agent.note?`: ${t.agent.note}`:''})`:''}`).join('\n');
+ const lists=[['Feito','done'],['Pendências','pending'],['Decisões','decisions'],['Próximos passos','next'],['Arquivos','files'],['Verificações executadas','checks'],['Cenários de teste humano','scenarios']].map(([l,k])=>agg[k].length?`${l}:\n${agg[k].map(x=>`- ${x.text} (${who(x.agentId)})`).join('\n')}`:'').concat(agg.notDone.length?[`Não feito:\n${agg.notDone.map(x=>`- ${x.item}${x.reason?`, motivo: ${x.reason}`:''} (${who(x.agentId)})`).join('\n')}`]:[]).filter(Boolean);
+ const outs=deliveryOutputs(f).map(o=>`### ${who(o.agentId)} (${o.simulated?'registro simulado':o.error?'falha':'Claude Code'})\n${clip(o.text,5000)}`).join('\n\n'),note=String(d?.get('note')||'').trim();
+ const history=[`${a.name}: ${c.greeting||''}`,...c.messages.filter(m=>!fresh.has(m.id)&&m.role!=='system').slice(-12).map(m=>`${m.role==='user'?'Pessoa':a.name}: ${m.text}`)].join('\n\n');
+ return[`# Revisão da entrega ${f.key} · ${p.code} ${p.name}`,`## Feature\n${f.title} (${STATUS[f.status]})\n\nEscopo:\n${clip(f.description||'(sem escopo)',3000)}`,`## Critérios de aceitação\n${crit||f.criteria||'(sem critérios)'}`,tasks?`## Tarefas\n${tasks}`:'',
+  `## Relatório consolidado dos agentes\n${lists.length?lists.join('\n\n'):'(os agentes não mandaram relatório estruturado; use as entregas abaixo)'}`,f.rework?reworkBlock(f.rework).replace('## Ajustes pedidos na revisão humana','## Ajustes pedidos na revisão anterior'):'',`## Entregas dos especialistas\n${clip(outs||'(nenhuma)',24000)}`,note?`## Observação geral escrita pela pessoa\n${note}`:'',
+  `## Conversa até aqui\n${history}`,`## ${msgs.length>1?'Novas mensagens':'Nova mensagem'} da pessoa\n${msgs.map(m=>m.text).join('\n\n')}`].filter(Boolean).join('\n\n');
+}
+async function applyReviewWrite(result,cost,meta={}){
+ const c=ui.featureChat;if(!c)return null;const {reply,data}=parseCoWrite(result),changes=[];
+ if(data&&typeof data==='object'){
+  for(const x of Array.isArray(data.comments)?data.comments:[]){const n=parseInt(x?.n,10),el=document.getElementById('rvC'+n),v=String(x?.comment??'').trim().slice(0,2000);if(el&&!el.readOnly&&v&&el.value.trim()!==v)changes.push({field:'rc'+n,value:v});}
+  if(typeof data.note==='string'){const el=$('#rvNote'),v=data.note.trim().slice(0,4000);if(el&&!el.readOnly&&v&&el.value.trim()!==v)changes.push({field:'rnote',value:v});}
+ }
+ return chatApply(c,reply,data,changes,cost,meta);
+}
+function feFieldId(k){return FE_FIELD_ID[k]||(/^rc\d+$/.test(k)?'rvC'+k.slice(2):k==='rnote'?'rvNote':'');}
+function feFieldLabel(k){return FE_FIELD_LABEL[k]||(/^rc\d+$/.test(k)?'Critério '+k.slice(2):k==='rnote'?'Observação':k);}
 
 /* Explicit handoffs keep the activity and the context together. */
 function openHandoffForm(){
@@ -13402,7 +13687,7 @@ function renderOpsFeatures(p){
  let key=ui.opsFeature,f=key&&key!=='new'?featureById(key):null;
  if(key&&(!f||!['done','review','running'].includes(f.status))){ui.opsFeature=key=null;f=null;}
  const body=$('#opsFeatBody');if(body)body.classList.toggle('with-detail',!!key);
- opsBlock('opsFeatureDetail',!key?'':JSON.stringify(['review',key,f.status,f.outputs.length]),()=>{
+ opsBlock('opsFeatureDetail',!key?'':JSON.stringify(['review',key,f.status,f.outputs.length,f.review?.at||'',f.rework?.at||'',f.tasks]),()=>{
   if(!key)return'';
   return`<div class="ops-detail-head"><div><span class="eyebrow">${E(project().code)} / ${E(f.key)}</span><h3>Revisão de entrega</h3></div><button class="icon-button small" data-action="ops-feature-close" aria-label="Fechar detalhe">${icon('close')}</button></div>`+reviewHTML(f);
  });
@@ -13827,9 +14112,9 @@ document.addEventListener('click',event=>{
   case 'portrait-pick':if(ui.draft?.kind==='agent'){ui.draft.agent.image=PORTRAITS[control.dataset.preset]||'';refreshPortraitPicker();closeLookPicker();}break;
   
   case 'prompt-reset':if(ui.draft?.kind==='agent')$('#agentPrompt').value=ROLES[$('#agentRole').value].prompt;break;
-  case 'projects':openProjects();break;case 'squad-select':selectSquad(agentId);break;case 'squad-open':openSquadStudio(agentId);break;case 'squad-new':newSquad();break;case 'squad-cancel-new':ui.squadDraft=null;ui.squadPick=null;ui.opPending=null;render();break;case 'squad-discard':ui.squadDraft=null;ui.squadPick=null;render();break;case 'squad-delete':deleteSquad(agentId);break;case 'project-export':exportProject(agentId);break;case 'fe-send':if(chatNow()?.kind==='agent')sendAgentChat();else sendFeatureChat();break;case 'fe-quick':sendFeatureChat(control.dataset.text);break;case 'fe-stop':{const k=chatNow()?.kind;if(k==='agent')agentChatStop();else if(k==='doc')docChatStop();else featureChatStop();break;}case 'agent-teams':event.preventDefault();openAgentTeams();break;case 'teams-mention':teamsMentionInsert(control.dataset.name);break;case 'teams-mention-pick':teamsMentionPick(control.dataset.name);break;case 'teams-tab':teamsTab(control.dataset.tab);break;case 'teams-agenda':teamsAgendaOpen(control.dataset.field);break;case 'teams-unshare':if(ui.docChat){ui.docChat.sharing=null;teamsSync();}break;case 'teams-leave':teamsLeave();break;case 'teams-leave-now':closeModal();break;case 'teams-stay':{const b=$('#atConfirm');if(b)b.hidden=true;$('#feChatInput')?.focus();break;}case 'teams-save-leave':$('#docForm')?.requestSubmit();break;case 'fe-undo':undoCoWrite(control.dataset.mid);break;case 'fe-jump':feScroll($('#feMsgs'),true);break;case 'fe-retry':retryCoWrite(control.dataset.mid);break;case 'ac-opt':agentChatChoose(control.dataset.mid,control.dataset.opt,control.dataset.arg||'');break;case 'fe-field':{if(ui.modal==='teams')teamsTab('docs');const el=document.getElementById(FE_FIELD_ID[control.dataset.field]),t=el?.closest('.fe-md')||el;if(t){t.classList.remove('collapsed');t.scrollIntoView({block:'nearest',behavior:'smooth'});t.classList.remove('fe-updated');void t.offsetWidth;t.classList.add('fe-updated');setTimeout(()=>t.classList.remove('fe-updated'),1400);}break;}case 'fe-collapse':{const sec=control.closest('.fe-md'),closed=sec.classList.toggle('collapsed');control.setAttribute('aria-expanded',String(!closed));break;}case 'fe-md-mode':feMdMode(control.closest('.fe-md'),control.dataset.mode);break;case 'fe-md-open':feMdMode(control.closest('.fe-md'),'edit');break;case 'fe-md-tool':feMdTool(control.closest('.fe-md')?.querySelector('.fe-area'),control.dataset.tool);break;case 'adr-add':{const list=control.closest('form')?.querySelector('.adr-list')||$('#adrList');if(list){list.insertAdjacentHTML('beforeend',adrBlockHTML({id:id('adr'),title:'',status:'Proposto',content:ADR_SKELETON},list.children.length));renumberAdrs(list);list.lastElementChild.querySelector('[name=adrTitle]').focus();}teamsSync();break;}case 'adr-remove':{const list=control.closest('.adr-list');control.closest('.adr-block')?.remove();renumberAdrs(list);teamsSync();break;}case 'sq-pick':openPick(control.dataset.slot,control.dataset.index);break;case 'sq-move':moveCursor(Number(control.dataset.dir)||1);break;case 'sq-cursor':clickPickItem(Number(control.dataset.i)||0);break;case 'sq-confirm':confirmPick();break;case 'sq-remove':removeOperator();break;case 'sq-more':pickMore();break;case 'sq-back':pickBack();break;case 'sq-node-view':state.settings.squadNodes=control.dataset.view==='photo'?'photo':'icon';save();render();break;case 'sq-close':ui.squadPick=null;render();break;case 'ops-feature-close':ui.opsFeature=null;ui.opsFeatureDraft=null;render();break;case 'ops-feat-view':ui.opsFeatView=control.dataset.view==='board'?'board':'list';render();break;case 'ops-plan-discard':ui.opsPlan=null;render();break;case 'ops-select':ui.opsFeature=null;ui.opsFeatureDraft=null;ui.opsPlan=null;switchProject(agentId,true);break;case 'ops-cancel-new':ui.opsNew=null;render();break;case 'ops-open-squad':goView('network');MapNetwork.home();break;case 'project-new':openProjectEditor();break;case 'op-new-existing':opNewPickStep();break;case 'op-new-squad':opNewNewSquad();break;case 'op-new-back':openOpNew(ui.opNew?.name);break;case 'op-new-back-squad':opNewSquadStep();break;case 'project-edit':openProjectEditor(agentId);break;case 'project-switch':switchProject(agentId);break;case 'project-delete':deleteProject(agentId);break;case 'briefing':openBriefing();break;
+  case 'projects':openProjects();break;case 'squad-select':selectSquad(agentId);break;case 'squad-open':openSquadStudio(agentId);break;case 'squad-new':newSquad();break;case 'squad-cancel-new':ui.squadDraft=null;ui.squadPick=null;ui.opPending=null;render();break;case 'squad-discard':ui.squadDraft=null;ui.squadPick=null;render();break;case 'squad-delete':deleteSquad(agentId);break;case 'project-export':exportProject(agentId);break;case 'fe-send':if(chatNow()?.kind==='agent')sendAgentChat();else sendFeatureChat();break;case 'fe-quick':sendFeatureChat(control.dataset.text);break;case 'fe-stop':{const k=chatNow()?.kind;if(k==='agent')agentChatStop();else if(k==='doc')docChatStop();else featureChatStop();break;}case 'agent-teams':event.preventDefault();openAgentTeams();break;case 'teams-mention':teamsMentionInsert(control.dataset.name);break;case 'teams-mention-pick':teamsMentionPick(control.dataset.name);break;case 'teams-tab':teamsTab(control.dataset.tab);break;case 'teams-agenda':teamsAgendaOpen(control.dataset.field);break;case 'teams-unshare':if(ui.docChat){ui.docChat.sharing=null;teamsSync();}break;case 'teams-leave':teamsLeave();break;case 'teams-leave-now':closeModal();break;case 'teams-stay':{const b=$('#atConfirm');if(b)b.hidden=true;$('#feChatInput')?.focus();break;}case 'teams-save-leave':$('#docForm')?.requestSubmit();break;case 'fe-undo':undoCoWrite(control.dataset.mid);break;case 'fe-jump':feScroll($('#feMsgs'),true);break;case 'fe-retry':retryCoWrite(control.dataset.mid);break;case 'ac-opt':agentChatChoose(control.dataset.mid,control.dataset.opt,control.dataset.arg||'');break;case 'fe-field':{if(ui.modal==='teams')teamsTab('docs');const el=document.getElementById(feFieldId(control.dataset.field)),t=el?.closest('.fe-md')||el;if(t){t.classList.remove('collapsed');t.scrollIntoView({block:'nearest',behavior:'smooth'});t.classList.remove('fe-updated');void t.offsetWidth;t.classList.add('fe-updated');setTimeout(()=>t.classList.remove('fe-updated'),1400);}break;}case 'fe-collapse':{const sec=control.closest('.fe-md'),closed=sec.classList.toggle('collapsed');control.setAttribute('aria-expanded',String(!closed));break;}case 'fe-md-mode':feMdMode(control.closest('.fe-md'),control.dataset.mode);break;case 'fe-md-open':feMdMode(control.closest('.fe-md'),'edit');break;case 'fe-md-tool':feMdTool(control.closest('.fe-md')?.querySelector('.fe-area'),control.dataset.tool);break;case 'adr-add':{const list=control.closest('form')?.querySelector('.adr-list')||$('#adrList');if(list){list.insertAdjacentHTML('beforeend',adrBlockHTML({id:id('adr'),title:'',status:'Proposto',content:ADR_SKELETON},list.children.length));renumberAdrs(list);list.lastElementChild.querySelector('[name=adrTitle]').focus();}teamsSync();break;}case 'adr-remove':{const list=control.closest('.adr-list');control.closest('.adr-block')?.remove();renumberAdrs(list);teamsSync();break;}case 'sq-pick':openPick(control.dataset.slot,control.dataset.index);break;case 'sq-move':moveCursor(Number(control.dataset.dir)||1);break;case 'sq-cursor':clickPickItem(Number(control.dataset.i)||0);break;case 'sq-confirm':confirmPick();break;case 'sq-remove':removeOperator();break;case 'sq-more':pickMore();break;case 'sq-back':pickBack();break;case 'sq-node-view':state.settings.squadNodes=control.dataset.view==='photo'?'photo':'icon';save();render();break;case 'sq-close':ui.squadPick=null;render();break;case 'ops-feature-close':ui.opsFeature=null;ui.opsFeatureDraft=null;render();break;case 'ops-feat-view':ui.opsFeatView=control.dataset.view==='board'?'board':'list';render();break;case 'ops-plan-discard':ui.opsPlan=null;render();break;case 'ops-select':ui.opsFeature=null;ui.opsFeatureDraft=null;ui.opsPlan=null;switchProject(agentId,true);break;case 'ops-cancel-new':ui.opsNew=null;render();break;case 'ops-open-squad':goView('network');MapNetwork.home();break;case 'project-new':openProjectEditor();break;case 'op-new-existing':opNewPickStep();break;case 'op-new-squad':opNewNewSquad();break;case 'op-new-back':openOpNew(ui.opNew?.name);break;case 'op-new-back-squad':opNewSquadStep();break;case 'project-edit':openProjectEditor(agentId);break;case 'project-switch':switchProject(agentId);break;case 'project-delete':deleteProject(agentId);break;case 'briefing':openBriefing();break;
   case 'features':openFeatures();break;case 'feature-new':openFeatureEditor(null,control.dataset.sprint);break;case 'feature-run':startRun({featureId:agentId});break;case 'sprint-run':startRun({sprintId:agentId});break;case 'sprint-new':openSprintEditor();break;case 'sprint-edit':openSprintEditor(agentId);break;case 'sprint-delete':deleteSprint(agentId);break;case 'sprint-toggle':{const s=sprintById(agentId);if(s){const open=control.getAttribute('aria-expanded')==='true';setSprintOpen(s.id,!open);render();}break;}case 'feature-open':openFeature(agentId);break;case 'feature-delete':deleteFeature(agentId);break;
-  case 'feature-approve':approveFeature(agentId,true);break;case 'feature-rework':approveFeature(agentId,false);break;
+  case 'feature-approve':approveFeature(agentId,true);break;case 'feature-review':openReview(agentId);break;case 'feature-rework':approveFeature(agentId,false);break;
   case 'distribute':openDistribution();break;case 'plan-apply':applyPlan(control.dataset.run==='1');break;
   case 'run':startRun();break;case 'stop':stopRun();break;case 'room':openOpsChat();break;case 'ops-chat-min':opsChatMin(true);break;case 'ops-chat-restore':opsChatMin(false);break;case 'ops-chat-close':opsChatClose();break;case 'room-approve':roomApprove();break;case 'room-cancel':stopRun();break;case 'spawn':openSpawn(agentId);break;
   case 'handoff-new':openHandoffForm();break;case 'handoff-history':openHandoffHistory();break;
@@ -13889,7 +14174,7 @@ document.addEventListener('keydown',event=>{if(event.target.id!=='convSearch')re
  if(k==='ArrowDown'||k==='ArrowUp'){event.preventDefault();convCursor=Math.max(0,Math.min(convFlat.length-1,convCursor+(k==='ArrowDown'?1:-1)));markConvCursor();}
  else if(k==='Enter'){event.preventDefault();const src=convFlat[convCursor];if(src)convAddSubset(src);}
  else if(k==='Escape'){event.preventDefault();event.stopImmediatePropagation();toggleConvPicker(false);$('#convAddBtn')?.focus();}},true);
-document.addEventListener('submit',event=>{if(!event.target.matches('#agentForm,#projectForm,#featureForm,#docForm,#sprintForm,#spawnForm,#handoffForm,#runtimeForm,#squadForm,#opNewForm,#opNewSquadForm,#dbSetupForm'))return;event.preventDefault();const form=event.target;({dbSetupForm:dbSetupFresh,agentForm:saveAgent,projectForm:saveProject,featureForm:saveFeature,docForm:saveProjectDoc,sprintForm:saveSprint,spawnForm:spawnAgent,handoffForm:saveHandoff,runtimeForm:saveRuntime,squadForm:()=>saveSquad(),opNewForm:opNewNext,opNewSquadForm:opNewCreate})[form.id](form);});
+document.addEventListener('submit',event=>{if(!event.target.matches('#agentForm,#projectForm,#featureForm,#reviewForm,#docForm,#sprintForm,#spawnForm,#handoffForm,#runtimeForm,#squadForm,#opNewForm,#opNewSquadForm,#dbSetupForm'))return;event.preventDefault();const form=event.target;({dbSetupForm:dbSetupFresh,agentForm:saveAgent,projectForm:saveProject,featureForm:saveFeature,reviewForm:saveReview,docForm:saveProjectDoc,sprintForm:saveSprint,spawnForm:spawnAgent,handoffForm:saveHandoff,runtimeForm:saveRuntime,squadForm:()=>saveSquad(),opNewForm:opNewNext,opNewSquadForm:opNewCreate})[form.id](form);});
 // Dragging a feature row onto another sprint accordion moves it there, keeping its route and status.
 let dragFeatureId=null;
 function dragEnd(){dragFeatureId=null;$$('#opsFeatureList .dragging,#opsFeatureList .drop').forEach(x=>x.classList.remove('dragging','drop'));}
