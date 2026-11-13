@@ -41,6 +41,10 @@
     </nav>
     <div class="system-meta">
       <button class="mode-indicator" id="modeIndicator" data-action="settings-claude" aria-label="Status do Claude Code"><i></i>CLAUDE CODE / VERIFICANDO</button>
+      <div class="notif-wrap">
+        <button class="icon-button notif-bell" id="notifBell" data-action="notif-open" aria-label="Notifica&ccedil;&otilde;es" aria-haspopup="dialog" aria-expanded="false" title="Notifica&ccedil;&otilde;es"><span data-icon="bell"></span><b class="notif-count" id="notifCount" hidden></b></button>
+        <div class="notif-panel" id="notifPanel" role="dialog" aria-label="Notifica&ccedil;&otilde;es" hidden></div>
+      </div>
       <button class="icon-button" data-action="settings" aria-label="Configuracoes" title="Configura&ccedil;&otilde;es"><span data-icon="settings"></span></button>
     </div>
   </header>

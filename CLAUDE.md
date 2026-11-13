@@ -13,7 +13,7 @@ Code (`claude -p`). The bridge keeps the app's data in a local SQLite database (
 ```sh
 npm install                 # better-sqlite3 (prebuilt binary; Node >= 22)
 npm run dev                 # build index.html from src/, start the bridge, rebuild on src/ changes, restart on server.js / db.js changes
-npm start                   # node server.js → http://127.0.0.1:4317 (--port N or SQUAD_PORT; SQUAD_CLAUDE_BIN for another claude; SQUAD_PROJECTS_DIR for another projects root; SQUAD_DATA_DIR for another database folder)
+npm start                   # node server.js → http://127.0.0.1:4317 (--port N or SQUAD_PORT; SQUAD_CLAUDE_BIN for another claude; SQUAD_PROJECTS_DIR for another projects root; SQUAD_DATA_DIR for another database folder; SQUAD_SMTP_* for e-mail notifications, read from a git-ignored .env next to server.js too)
 python build.py [--copy]    # full build: regenerates src/avatars.js (needs Pillow), writes index.html (--copy: also ../squad-code-network.html)
 npm test                    # bridge tests + the Figma MCP server's: node --test tests/bridge.test.mjs tests/figma-mcp.test.mjs (tests/fake-claude.mjs and a fake Figma API, no API cost)
 node --test --test-name-pattern "<test name>" tests/bridge.test.mjs   # single bridge test
@@ -109,6 +109,17 @@ variable reaches the server as the literal text. The server only issues GET requ
 code of a built-in server (`BUILTIN_MCP_FILES`) so the export can ship it. The server caches JSON answers on disk for 5 minutes
 (`FIGMA_CACHE_TTL_S`, `FIGMA_CACHE_DIR`; key = sha256 of token + URL, private folder; errors and `figma_whoami` are never cached;
 every tool takes `fresh`).
+E-mail notifications: `mailer.js` (no dependencies) is an SMTP client for Gmail with an app password (465 implicit TLS, other
+ports STARTTLS, `SQUAD_SMTP_TLS=implicit|starttls` overrides, AUTH PLAIN/LOGIN; `SQUAD_SMTP_TLS=off` only for a loopback host, tests;
+network/TLS errors in Portuguese, `netMessage`) plus `createMailQueue`, which groups notices
+for `SQUAD_MAIL_DELAY_MS` (60 s) into one e-mail (`digest`) and keeps `SQUAD_MAIL_MAX_HOUR` (20). Settings come only from the
+environment (`mailConfig`: `SQUAD_SMTP_USER`, `SQUAD_SMTP_PASS`, `SQUAD_NOTIFY_EMAIL`, defaulting to the sender), and `server.js`
+first loads `SQUAD_ENV_FILE` (default `.env` next to it, `process.loadEnvFile`, environment wins; tests pass `''`). The page never
+picks the recipient: `POST /api/notify/email {items}` (`validateItems`: 1..20 notices, plain short text, subject without line
+breaks) answers 202 and queues; `POST /api/notify/email/test` sends at once and returns the SMTP error (a refused login says to use an
+app password, never the password); both 503 when not configured. `/api/health` carries `email` (configured, to, from, lastError,
+lastSentAt, counts; never the password). Shutdown sends what is queued (at most 8 s). Tests use a fake SMTP server on loopback (plain, implicit TLS and STARTTLS, with the
+self-signed `tests/fixtures/smtp-cert.pem` trusted through `NODE_EXTRA_CA_CERTS`).
 
 **`src/app.js` (state, UI, orchestration).**
 - One persisted `state` object (localStorage key `squad-code.network.v2`, export/import as JSON). Served by the bridge, the database
@@ -135,6 +146,19 @@ every tool takes `fresh`).
   `opsBlock(id, signature, html)`: a block's innerHTML is replaced only when its JSON signature changes,
   so background renders (runner ticks, logs) don't wipe inputs the user is typing in. Keep signatures
   free of values the user is editing.
+- Notifications (`notify(kind,{p,f,title,text,key})`, block after `toast`): `NOTIFY_KINDS` (defined before `DEFAULT_SETTINGS`
+  because `normalizeNotify` runs while the state loads; tone action/error/warn/info, `def` channel) are fired from the run path:
+  `plan-awaiting` and `plan-fallback`/`plan-empty` in `planWithCommander`, `review` in `advanceRoute`, `step-failed` in `liveStep`,
+  `route-broken` and `round-end` in `launchNext`, `unblocked` in `approveFeature`. A `key` is never repeated (`notifSeen`).
+  `state.settings.notify` = `{desktop, sound, title, email, kinds:{kind:'off'|'app'|'email'}}` (persisted, `normalizeNotify`, seed
+  `defaultNotify()`). The list itself is per origin in localStorage (`squad-code.notifications.v1`, 100 kept, `storage` event syncs
+  tabs), never in the workspace. Channels: bell `#notifBell`/`#notifCount`/`#notifPanel` in `.system-meta` (`notifChrome`, called at
+  boot and on every change, not by `render()`; `notifGo` switches project and opens the feature or the operation chat), Notification
+  API only while the tab is hidden (permission from the toggle's click), unread action/error count in `document.title`, WebAudio
+  beeps, and `notifEmail` → `/api/notify/email` only for `'email'` kinds, live runs (`n.demo` false) and `ui.bridge.email.configured`.
+  `notifResolve` marks a notice read when the person deals with it in the app (plan approved/cancelled, delivery reviewed).
+  Configurações > Notificações (`settingsTab 'notify'`, `notifySettingsHTML`, opened through `openNotifySettings`, which re-reads
+  `/api/health`).
 - Interaction is delegated: one document `click` dispatcher switches on `data-action` (the element's
   `data-id` arrives as `agentId`), and a `submit` map routes by form id (`#agentForm → saveAgent`,
   `#projectForm → saveProject`, `#squadForm`, …).

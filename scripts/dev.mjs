@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Dev runner: builds index.html, starts the bridge, rebuilds on src/ changes and restarts on server.js / db.js changes.
+// Dev runner: builds index.html, starts the bridge, rebuilds on src/ changes and restarts on server.js / db.js / mailer.js changes.
 //   npm run dev [-- --port 4317]
 import { spawn } from 'node:child_process';
 import { readFileSync, writeFileSync, watch } from 'node:fs';
@@ -47,7 +47,7 @@ try { build(); } catch (err) { say(`falha no build inicial: ${err.message}`); pr
 start();
 watch(SRC, (_event, file) => { if (file && /\.(js|css|html)$/.test(file)) rebuild(); });
 const restartSoon = debounce(restart, 200);
-for (const file of ['server.js', 'db.js']) watch(path.join(ROOT, file), restartSoon);
+for (const file of ['server.js', 'db.js', 'mailer.js']) watch(path.join(ROOT, file), restartSoon);
 say('observando src/, server.js e db.js. Ctrl+C para sair.');
 
 const stop = () => { if (server) server.kill(); process.exit(0); };
