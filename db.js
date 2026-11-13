@@ -28,7 +28,7 @@ const ROOM_MAX = 800;
 const CHAT_MAX = 300;
 const KEEP_RUNS = 300;
 const REF_RE = /^[A-Za-z0-9_-]{1,100}$/;
-const CHAT_KEY_RE = { feature: REF_RE, agent: REF_RE, doc: /^[A-Za-z0-9_:+-]{1,800}$/ };
+const CHAT_KEY_RE = { feature: REF_RE, review: REF_RE, agent: REF_RE, doc: /^[A-Za-z0-9_:+-]{1,800}$/ };
 const ROOM_KINDS = new Set(['system', 'say', 'call', 'baton', 'plan', 'review']);
 const RUN_KINDS = new Set(['step', 'plan', 'chat', 'cowrite', 'doc', 'spawn']);
 
@@ -335,7 +335,7 @@ function openStore(dataDir) {
     return out;
   }
 
-  /* ---------- chats (feature co-writing, agent chat, Agent Teams) ---------- */
+  /* ---------- chats (feature co-writing, delivery review, agent chat, Agent Teams) ---------- */
   function saveChat(kind, key, body) {
     if (!CHAT_KEY_RE[kind]) throw bad('Tipo de conversa inválido.');
     if (!CHAT_KEY_RE[kind].test(key)) throw bad('Conversa inválida.');
@@ -349,7 +349,7 @@ function openStore(dataDir) {
   }
   function deleteChat(kind, key) { q.chatDelete.run(kind, key); return { ok: true }; }
   function loadChats() {
-    const out = { feature: {}, agent: {}, doc: {} };
+    const out = { feature: {}, review: {}, agent: {}, doc: {} };
     for (const r of q.chatAll.all()) if (out[r.kind]) { try { out[r.kind][r.key] = JSON.parse(r.data); } catch {} }
     return out;
   }
@@ -358,7 +358,7 @@ function openStore(dataDir) {
   function sweep() {
     if (!q.root.get()) return;
     db.transaction(() => {
-      db.prepare(`DELETE FROM chats WHERE (kind = 'feature' AND ref_id NOT IN (SELECT key FROM features)) OR (kind = 'agent' AND ref_id NOT IN (SELECT key FROM agents)) OR (kind = 'doc' AND project_id NOT IN (SELECT key FROM projects))`).run();
+      db.prepare(`DELETE FROM chats WHERE (kind IN ('feature', 'review') AND ref_id NOT IN (SELECT key FROM features)) OR (kind = 'agent' AND ref_id NOT IN (SELECT key FROM agents)) OR (kind = 'doc' AND project_id NOT IN (SELECT key FROM projects))`).run();
       db.prepare('DELETE FROM room_messages WHERE project_id NOT IN (SELECT key FROM projects)').run();
       db.prepare('DELETE FROM room_state WHERE project_id NOT IN (SELECT key FROM projects)').run();
     })();
