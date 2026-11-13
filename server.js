@@ -482,6 +482,7 @@ async function startRun(body) {
       result: typeof r.result === 'string' ? r.result : '',
       costUsd: r.total_cost_usd ?? r.cost_usd ?? null, durationMs: r.duration_ms ?? null,
       numTurns: r.num_turns ?? null, sessionId: r.session_id ?? null,
+      usage: dbModule.usageOf(r), meta: run.meta,
       error: isError ? (run.cancelled ? 'Execução cancelada pelo operador.' : run.timedOut ? 'Tempo limite excedido.' : (r.is_error && r.result) || stderrTail.trim().slice(-1500) || `claude saiu com código ${code}`) : null,
     };
     pushEvent(run, exit);
@@ -549,10 +550,11 @@ function workspaceTag() {
   return jsonTag('squad-disk', { rev: info.rev, savedAt: info.savedAt, path: store?.file || DB_FILE, workspace: info.workspace, error: info.error || '', setup: !info.error && !info.workspace && setupNeeded() });
 }
 // Operation rooms (the last 200 messages of each project) and chats; orphans are swept first.
+// usage: tokens per operation/agent/feature/kind/day (GET /api/usage), so the page shows consumption without asking.
 function memoryTag() {
-  if (!store) return jsonTag('squad-memory', { rooms: {}, chats: {} });
-  try { store.sweep(); return jsonTag('squad-memory', { rooms: store.loadRooms(200), chats: store.loadChats() }); }
-  catch (e) { console.warn(`Sala e conversas não carregadas: ${e.message}`); return jsonTag('squad-memory', { rooms: {}, chats: {} }); }
+  if (!store) return jsonTag('squad-memory', { rooms: {}, chats: {}, usage: [] });
+  try { store.sweep(); return jsonTag('squad-memory', { rooms: store.loadRooms(200), chats: store.loadChats(), usage: store.usageSummary() }); }
+  catch (e) { console.warn(`Sala e conversas não carregadas: ${e.message}`); return jsonTag('squad-memory', { rooms: {}, chats: {}, usage: [] }); }
 }
 
 /* ---------- http ---------- */
@@ -632,6 +634,7 @@ async function handle(req, res) {
       const list = store.listRuns({ projectId: url.searchParams.get('projectId') || '', limit: url.searchParams.get('limit') });
       return json(res, 200, { ok: true, runs: list.map(r => runs.has(r.id) ? { ...r, status: runs.get(r.id).status } : r) });
     }
+    if (url.pathname === '/api/usage' && req.method === 'GET') return json(res, 200, { ok: true, usage: store ? store.usageSummary() : [] });
     if (url.pathname === '/api/runs' && req.method === 'POST') {
       const run = await startRun(await readBody(req));
       return json(res, 201, { ok: true, runId: run.id, args: run.args, cwd: run.cwd });

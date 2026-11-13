@@ -37,5 +37,5 @@ process.stdin.on('end', () => {
   emit({ type: 'assistant', message: { content: [{ type: 'tool_use', id: 't1', name: 'Read', input: { file_path: 'README.md' } }] } });
   if (args.includes('--include-partial-messages')) for (const text of ['wor', 'king']) emit({ type: 'stream_event', event: { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text } } });
   emit({ type: 'assistant', message: { content: [{ type: 'text', text: 'working' }] } });
-  emit({ type: 'result', subtype: 'success', is_error: false, result: `ECHO:${input.trim()}|SYS:${system.trim()}`, total_cost_usd: 0.001, duration_ms: 12, num_turns: 1, session_id: 'fake-session' });
+  emit({ type: 'result', subtype: 'success', is_error: false, result: `ECHO:${input.trim()}|SYS:${system.trim()}`, total_cost_usd: 0.001, duration_ms: 12, num_turns: 1, session_id: 'fake-session', usage: { input_tokens: 12, output_tokens: 5, cache_read_input_tokens: 100, cache_creation_input_tokens: 20 }, modelUsage: { 'claude-fake': { inputTokens: 12, outputTokens: 5, cacheReadInputTokens: 100, cacheCreationInputTokens: 20, costUSD: 0.0009 }, 'claude-fake-small': { inputTokens: 3, outputTokens: 1, cacheReadInputTokens: 0, cacheCreationInputTokens: 0, costUSD: 0.0001 } } });
 });

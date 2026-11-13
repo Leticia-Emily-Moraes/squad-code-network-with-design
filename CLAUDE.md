@@ -93,6 +93,15 @@ projectId, agentId, featureId, kind), events batched every 200 ms (`persistEvent
 always kept), `finishRun` on close; at start runs left `running` become `interrupted` with a synthetic exit event; newest 300 kept.
 `GET /api/runs` (`?projectId`, `limit`) lists the history, and `/api/runs/:id[/events]` fall back to it for runs not in memory; the
 console's **Histórico** (`openConsoleHistory` → `replayRun`, client `runMeta` on the four `POST /api/runs`) replays them.
+Tokens: the exit event carries `usage` (`usageOf`: `modelUsage` summed over every model of the run, else `usage`; `{input, output,
+cacheRead, cacheWrite, model}`) and the run's `meta`. `finishRun` writes one row per run to the `usage` table (migration v2, which
+backfills from saved `result` events; kept apart from `runs`, so the totals survive the history's pruning; newest 50000). `usageSummary`
+(sums per project/agent/feature/kind/local day) goes in `#squad-memory.usage` and `GET /api/usage`. In the page `ui.usage` holds those
+rows, `streamRun` calls `usageAdd` on each exit (not on replays) and `tokLiveEvent` counts runs in progress (`ui.tokLive`); `tokChanged`
+re-renders. Shown in the top bar (`#tokMeter`, `tokChrome`, click → `tokOpen`), every chat (`m.tok` per reply in `feFootHTML`,
+`#chatTok`/`chatTokSync` in the three headers), the operation chat (`#roomTok`/`roomTokHTML`, `tokens` on baton and plan messages), the
+Painel (`homeUsageHTML`, project cards, run and review cards), the Squad map (roster, squad head, profile) and Handoffs (`handoffTokHTML`).
+Feature outputs and handoffs persist their step's `tokens` (`normTok`, in `normalizeWorkspace`). Demo runs spend none.
 Squad colleagues: the `agents` option (whitelisted CLI subagent fields: `description`, `prompt`, `tools`, `model`, `effort`) is written
 to a temp file passed as `--agents <file>`, and `forwardSubagents:true` adds `--forward-subagent-text`. Runs with agents get
 `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1`, so an `Agent` tool call runs in the foreground and its tool_result is the colleague's
