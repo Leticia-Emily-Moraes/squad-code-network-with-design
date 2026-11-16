@@ -575,9 +575,11 @@ test('MCP servers reach the run as --mcp-config, with --strict-mcp-config, and i
   } });
   assert.equal(init.strictMcp, true);
 
-  // No servers: no flag at all.
+  // No servers: no config file, but still --strict-mcp-config, so the person's own servers stay out.
   res = await api('/api/runs', { method: 'POST', body: JSON.stringify({ prompt: 'hello', options: { cwd: workdir } }) });
-  assert.ok(!(await res.json()).args.includes('--mcp-config'));
+  const plain = (await res.json()).args;
+  assert.ok(!plain.includes('--mcp-config'));
+  assert.ok(plain.includes('--strict-mcp-config'));
 
   for (const bad of [
     { k: { url: 'file:///etc/passwd' } },
