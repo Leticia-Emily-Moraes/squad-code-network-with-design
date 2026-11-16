@@ -2373,7 +2373,8 @@ function claudeArgs(o,systemFile){
  if(systemFile)args.push(['--append-system-prompt-file',systemFile]);
  if(o.project)args.push(['--settings','squad.settings.json']);
  if(o.agents)args.push(['--agents','squad.agents.json']);
- if(o.mcpServers)args.push(['--mcp-config','squad.mcp.json'],['--strict-mcp-config']);
+ if(o.mcpServers)args.push(['--mcp-config','squad.mcp.json']);
+ args.push(['--strict-mcp-config']);
  if(o.forwardSubagents)args.push(['--forward-subagent-text']);
  if(o.model)args.push(['--model',o.model]);
  args.push(['--permission-mode',o.permissionMode||'dontAsk']);

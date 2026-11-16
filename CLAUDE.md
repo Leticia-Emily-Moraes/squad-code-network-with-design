@@ -115,8 +115,8 @@ to a temp file passed as `--agents <file>`, and `forwardSubagents:true` adds `--
 `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1`, so an `Agent` tool call runs in the foreground and its tool_result is the colleague's
 report (framed as "[Subagent hand-back] ... The report follows:" with indented lines; `subagentReport` unwraps it).
 MCP servers: the `mcpServers` option (`validateMcpServers`: `http`/`sse` by URL, `stdio` by command, or `{builtin:'<name>'}` for
-`BUILTIN_MCP`) is written to a temp `--mcp-config` file with `--strict-mcp-config`, so squad runs never inherit the person's own MCP
-servers; the temp file is masked as `<mcp-file>` and removed with the others. Claude Code expands `${VAR}` in every field of that
+`BUILTIN_MCP`) is written to a temp `--mcp-config` file; `--strict-mcp-config` goes on every run (with or without servers), so squad runs never
+inherit the person's own MCP servers or claude.ai connectors (without it an agent with no server saw them and dontAsk denied each call); the temp file is masked as `<mcp-file>` and removed with the others. Claude Code expands `${VAR}` in every field of that
 file, so nothing coming from the page may contain `${` (refused). `BUILTIN_MCP` servers ship in `scripts/` and the bridge supplies
 their command: `figma-api` (`scripts/figma-mcp.mjs`: read-only, no dependencies, Figma REST with a personal token, works on every
 plan without Dev Mode) gets `FIGMA_TOKEN: '${FIGMA_TOKEN:-}'`, so the token comes from the environment the bridge was started in

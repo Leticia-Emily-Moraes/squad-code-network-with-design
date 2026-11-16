@@ -421,9 +421,11 @@ async function startRun(body) {
   if (opts.mcpServers) {
     mcpFile = path.join(TMP_DIR, `${id}.mcp.json`);
     await fsp.writeFile(mcpFile, JSON.stringify({ mcpServers: opts.mcpServers }), 'utf8');
-    // --strict-mcp-config: only these servers, never the ones configured in the person's own Claude Code.
-    args.push('--mcp-config', mcpFile, '--strict-mcp-config');
+    args.push('--mcp-config', mcpFile);
   }
+  // --strict-mcp-config on every run, with or without servers: the person's own servers (user scope, claude.ai connectors) never
+  // reach a squad run. Without it an agent with no server still sees them, and dontAsk denies each call ("you haven't granted it yet").
+  args.push('--strict-mcp-config');
   if (opts.forwardSubagents) args.push('--forward-subagent-text');
   if (opts.model) args.push('--model', opts.model);
   // Headless has nobody to approve a prompt: without a mode from the page, dontAsk denies what would need one.
