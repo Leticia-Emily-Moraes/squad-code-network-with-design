@@ -62,9 +62,17 @@ first run. Because Claude Code loads CLAUDE.md from every folder above the cwd, 
 own git repository (`ensureProjectRepo`: `git init` before a run when `.git` is missing; skipped without git) and project runs get
 `GIT_CEILING_DIRECTORIES` = PROJECTS_DIR (`gitCeiling`), so Claude Code (git status, `.claude/settings.json` from the repo root outside
 Windows) and the agents' git commands never reach the enclosing repository (this app's clone). The same settings file sets
-`permissions.blockReadsOutsideWorkingDirectories`, so the file tools refuse reads outside the folder (and `--add-dir`). An explicit `cwd` stays as a fallback
+`permissions.blockReadsOutsideWorkingDirectories`, so the file tools refuse reads outside the folder (and `--add-dir`), and
+`autoMemoryEnabled:false` (the memory index cost ~7k tokens per run and agents spent turns writing it; handoffs carry that context). A run
+without tools (`tools:[]`: chats, plan, Agent Teams) also excludes the project's own CLAUDE.md/AGENTS.md/rules (`NO_TOOLS_MEMORY_EXCLUDES`),
+since its context is all in the prompt. Every run gets `TOKEN_ENV` unless the bridge's environment sets it: `CLAUDE_CODE_AUTO_COMPACT_WINDOW=200000`
+(1M-window models otherwise never compact and a long step rereads up to 430k tokens per turn) and `CLAUDE_CODE_PROMPT_CACHE_TTL=5m`
+(claude -p writes a 1 h cache at twice the input price; undocumented, checked against claude 2.1.325; the fake claude reports both). An explicit `cwd` stays as a fallback
 (tests, direct API use); a run with neither `project` nor `cwd` is refused (never `process.cwd()`, the app folder). The step prompt
-(`buildStepPrompt`) and `CALLED_AGENT_SYSTEM` tell agents to keep every file inside the folder. The settings.json project/local scopes
+(`buildStepPrompt`) and `CALLED_AGENT_SYSTEM` tell agents to keep every file inside the folder. The step prompt stays in the context on
+every turn, so it is kept short: `stepBriefing` cuts the briefing at `STEP_BRIEF_CLIP` (full only for F00), dependencies at
+`STEP_DEP_CLIP`, the panorama at `PANORAMA_SHORT` (also in agent chats; co-writing and the plan keep 24k), and `STEP_CHECKS` asks for
+the full suite once at the end. The settings.json project/local scopes
 take `project=` as well.
 Data: `db.js` (`openStore(DATA_DIR)`, `SQUAD_DATA_DIR`, default `./data`, git-ignored) opens `squad.db` (WAL, foreign keys, migrations
 by `user_version`); without better-sqlite3 the bridge exits at start telling to run `npm install` (`driverError`). **The database is
@@ -317,7 +325,7 @@ self-signed `tests/fixtures/smtp-cert.pem` trusted through `NODE_EXTRA_CA_CERTS`
   `OP_CATEGORIES` (operators picked by category → sub-specialty, generalist first) and are
   materialized by `createPresetAgent`. Each agent has `model` (catalog `CLAUDE_MODELS`: aliases, pinned IDs, `inherit`;
   any id valid for the bridge survives import) and `effort` (`EFFORTS`, `''` = model default; none for Haiku,
-  `modelEffortSupport`). The global runtime model/effort override the agent's (`runOptionsFor` → `agentEffort`); both go
+  `modelEffortSupport`; catalog operators start at `medium`, `presetEffort`). The global runtime model/effort override the agent's (`runOptionsFor` → `agentEffort`); both go
   to the exported `.claude/agents/*.md` frontmatter (`agentMarkdown`) and to the CLAUDE.md command-chain table.
 - SOUL: `src/souls.js` (`AGENT_SOULS` per catalog codename + `GENERIC_SOUL`) gives each agent `soul`/`hellos` (greeting variations, one picked at random per chat)
   (`defaultSoul`); it shapes the chat tone and greeting (`soulBlock`, `feGreeting`) and is exported (`soulMarkdown`).

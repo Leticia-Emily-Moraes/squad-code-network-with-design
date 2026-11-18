@@ -104,6 +104,11 @@ test('project runs get their own folder under the projects root, without the app
   assert.equal(init.cwd, realpathSync.native(dir));
   assert.ok(init.settings.claudeMdExcludes.includes(realpathSync.native(path.join(ROOT, 'CLAUDE.md')).replace(/\\/g, '/')));
   assert.equal(init.settings.permissions.blockReadsOutsideWorkingDirectories, true);
+  // Token savings: no auto-memory, compaction at 200k and a 5 minute prompt cache; the project's CLAUDE.md stays (the run has tools).
+  assert.equal(init.settings.autoMemoryEnabled, false);
+  assert.ok(!init.settings.claudeMdExcludes.includes('**/CLAUDE.md'));
+  assert.equal(init.compactWindow, process.env.CLAUDE_CODE_AUTO_COMPACT_WINDOW || '200000');
+  assert.equal(init.cacheTtl, process.env.CLAUDE_CODE_PROMPT_CACHE_TTL || '5m');
   // The folder is its own repository and git stops at the projects root: the agents' git commands never reach the enclosing one.
   assert.ok(init.gitCeiling.split(path.delimiter).includes(realpathSync.native(projectsRoot)));
   if (git) {
@@ -112,6 +117,11 @@ test('project runs get their own folder under the projects root, without the app
   }
   rmSync(path.join(projectsRoot, '.git'), { recursive: true, force: true });
   assert.equal(events.at(-1).status, 'done');
+  // A run without tools (chats, plan) leaves the project's own CLAUDE.md files out too: its context is all in the prompt.
+  const chat = await (await api('/api/runs', { method: 'POST', body: JSON.stringify({ prompt: 'oi', options: { project: folder, tools: [] } }) })).json();
+  const chatInit = (await collect(chat.runId)).find(e => e.type === 'system' && e.subtype === 'init');
+  assert.ok(chatInit.settings.claudeMdExcludes.includes('**/CLAUDE.md'));
+  assert.equal(chatInit.settings.autoMemoryEnabled, false);
   // Runs without a project keep the plain cwd, no extra settings and no git ceiling.
   const plain = await (await api('/api/runs', { method: 'POST', body: JSON.stringify({ prompt: 'x', options: { cwd: workdir } }) })).json();
   assert.ok(!plain.args.includes('--settings'));

@@ -157,6 +157,16 @@ const APP_MEMORY_EXCLUDES = (() => {
   const files = ['CLAUDE.md', 'CLAUDE.local.md', 'AGENTS.md', '.claude/CLAUDE.md', '.claude/rules/**'];
   return [...files.map(f => `${root}/${f}`), ...files.map(f => `**/${tail}/${f}`)];
 })();
+// A run without tools (chats, the commander's plan, Agent Teams) gets its whole context in the prompt: the project's own CLAUDE.md
+// files would only add tokens to every turn, so they stay out too.
+const NO_TOOLS_MEMORY_EXCLUDES = ['**/CLAUDE.md', '**/CLAUDE.local.md', '**/AGENTS.md', '**/.claude/CLAUDE.md', '**/.claude/rules/**'];
+/* Token savings on every run (the environment the bridge was started in wins):
+ * - auto-compaction at 200k tokens: models with a 1M window otherwise never compact, and a long step rereads its whole history
+ *   (up to 430k tokens) on every turn;
+ * - prompt cache of 5 minutes: claude -p writes it with a 1 h lifetime (twice the input price), while a squad run is one turn
+ *   (chats, plan) or turns seconds apart (steps). CLAUDE_CODE_PROMPT_CACHE_TTL is not documented: checked against claude 2.1.325. */
+const TOKEN_ENV = { CLAUDE_CODE_AUTO_COMPACT_WINDOW: '200000', CLAUDE_CODE_PROMPT_CACHE_TTL: '5m' };
+const tokenEnv = () => Object.fromEntries(Object.entries(TOKEN_ENV).filter(([k]) => !process.env[k]));
 
 /* Each project folder is its own git repository (git init before its first run, when git is installed). Otherwise Claude Code, which
  * takes the enclosing repository as the project (git status, .claude/settings.json outside Windows), and the agents' git commands
@@ -408,8 +418,10 @@ async function startRun(body) {
   if (opts.projectRun) {
     settingsFile = path.join(TMP_DIR, `${id}.settings.json`);
     // The file tools also refuse reads outside the project folder (and --add-dir), so agents never take this app or the
-    // person's other folders for the project.
-    await fsp.writeFile(settingsFile, JSON.stringify({ claudeMdExcludes: APP_MEMORY_EXCLUDES, permissions: { blockReadsOutsideWorkingDirectories: true }, includeCoAuthoredBy: false, attribution: { commit: '', pr: '' } }), 'utf8');
+    // person's other folders for the project. No auto-memory: its index (and the turns spent writing it) went into every run,
+    // while the step prompt already carries the handoffs.
+    const noTools = Array.isArray(opts.tools) && !opts.tools.length;
+    await fsp.writeFile(settingsFile, JSON.stringify({ claudeMdExcludes: noTools ? [...APP_MEMORY_EXCLUDES, ...NO_TOOLS_MEMORY_EXCLUDES] : APP_MEMORY_EXCLUDES, autoMemoryEnabled: false, permissions: { blockReadsOutsideWorkingDirectories: true }, includeCoAuthoredBy: false, attribution: { commit: '', pr: '' } }), 'utf8');
     args.push('--settings', settingsFile);
   }
   if (opts.agents) {
@@ -442,7 +454,7 @@ async function startRun(body) {
     cwd: opts.cwd, windowsHide: true, detached: !IS_WIN,
     // With squad colleagues, calls run in the foreground: the Agent tool result is the colleague's answer, not a launch notice.
     // Project runs: git stops at PROJECTS_DIR (see ensureProjectRepo), even when the folder's own .git is missing.
-    env: { ...process.env, CLAUDE_CODE_ENTRYPOINT: process.env.CLAUDE_CODE_ENTRYPOINT || 'squad-code-bridge', ...(opts.agents ? { CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: '1' } : {}), ...(opts.projectRun ? { GIT_CEILING_DIRECTORIES: gitCeiling() } : {}) },
+    env: { ...process.env, ...tokenEnv(), CLAUDE_CODE_ENTRYPOINT: process.env.CLAUDE_CODE_ENTRYPOINT || 'squad-code-bridge', ...(opts.agents ? { CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: '1' } : {}), ...(opts.projectRun ? { GIT_CEILING_DIRECTORIES: gitCeiling() } : {}) },
     stdio: ['pipe', 'pipe', 'pipe'],
   });
   const run = {
